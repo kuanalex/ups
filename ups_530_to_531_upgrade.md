@@ -6,8 +6,8 @@
 CPD: 5.3.0
 OCP: 4.17
 Storage: Netapp
-Internet: online
-Private container registry: no
+Internet: airgap
+Private container registry: yes
 Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
@@ -17,8 +17,8 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate
 CPD: 5.3.1
 OCP: None
 Storage: Netapp
-Internet: online
-Private container registry: no
+Internet: airgap
+Private container registry: yes
 Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
@@ -33,14 +33,14 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate
 
 | Field | Value |
 |-------|-------|
-| **Generated** | 2026-04-14 08:51:21 UTC |
+| **Generated** | 2026-04-14 11:11:13 UTC |
 | **Generator Version** | 1.2.0 |
 | **Cluster Name** | UPS Production Cluster |
 | **Current CPD Version** | v5.3.0 |
 | **Target CPD Version** | v5.3.1 |
 | **OpenShift Version** | 4.17 |
 | **Storage Vendor** | Netapp |
-| **Internet Access** | Online |
+| **Internet Access** | Airgap |
 | **Services Count** | 8 |
 | **Estimated Duration** | 5 hours 50 minutes |
 
@@ -131,6 +131,7 @@ podman version
 - [ ] OpenShift cluster admin access
 - [ ] IBM Entitlement Key with appropriate permissions
 - [ ] Access to IBM Container Registry (cp.icr.io)
+- [ ] Access to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
 ### 2.3 Environment Variables Setup (cpd_vars.sh)
 
@@ -181,11 +182,15 @@ export STG_CLASS_FILE=gcnv-standard-k8s
 # IBM Entitlement
 export IBM_ENTITLEMENT_KEY=REPLACE_WITH_YOUR_ENTITLEMENT_KEY
 
+# Private Registry Configuration
+export PRIVATE_REGISTRY_LOCATION=UPDATE_WITH_PRIVATE_REGISTRY_URL
+export PRIVATE_REGISTRY_PULL_USER=REPLACE_WITH_REGISTRY_USER
+export PRIVATE_REGISTRY_PULL_PASSWORD=REPLACE_WITH_REGISTRY_PASSWORD
 
 # Image Registry Configuration
 export IMAGE_PULL_SECRET=ibm-entitlement-key
-export IMAGE_PULL_CREDENTIALS=cp:${IBM_ENTITLEMENT_KEY}
-export IMAGE_PULL_PREFIX=cp.icr.io
+export IMAGE_PULL_CREDENTIALS=${PRIVATE_REGISTRY_PULL_USER}:${PRIVATE_REGISTRY_PULL_PASSWORD}
+export IMAGE_PULL_PREFIX=${PRIVATE_REGISTRY_LOCATION}
 
 # Components to Upgrade
 export COMPONENTS=cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
@@ -237,7 +242,61 @@ cpd-cli manage restart-container
 podman ps | grep olm-utils
 ```
 
-### 2.7 Air-Gapped/Private Registry Configuration
+### 2.7 Air-Gapped Environment Prerequisites
+
+
+**⚠️ IMPORTANT**: This cluster uses a private container registry in an air-gapped environment. The following prerequisites must be completed before proceeding with the upgrade.
+
+**Private Registry**: UPDATE_WITH_PRIVATE_REGISTRY_URL
+
+---
+
+#### Required Prerequisites for Air-Gapped Upgrades
+
+The following steps must be completed before starting the upgrade process. Refer to IBM documentation for detailed procedures:
+
+**1. Obtain OLM Utils v4 Image**
+   - **Reference**: [Obtaining the olm-utils-v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)
+   - Download the OLM utils image for air-gapped operations
+
+**2. Download CASE Packages**
+   - **Reference**: [Downloading CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)
+   - Download CASE packages for all components being upgraded
+
+**3. Mirror Images to Private Registry**
+   - **Option A (Direct)**: [Mirroring images directly to private container registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2)
+   - **Option B (Intermediary)**: [Mirroring images using intermediary container registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2)
+   - Mirror all required images to your private registry
+
+**4. Pull OLM Utils Image from Private Registry**
+   - **Reference**: [Pulling the olm-utils-v4 image from private container registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)
+   - Configure OLM utils to use your private registry
+
+**5. Update Cluster-Scoped Resources for Shared Components**
+   - **Reference**: [Updating cluster-scoped resources for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components-1)
+   - Update CASE packages for scheduling service and other shared components
+
+**6. Update Cluster-Scoped Resources for Platform and Services**
+   - **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
+   - Update CASE packages for CPD platform and all services
+
+---
+
+#### Pre-Upgrade Checklist
+
+Verify the following before proceeding:
+
+- [ ] OLM utils v4 image obtained and configured
+- [ ] CASE packages downloaded for all components
+- [ ] Images mirrored to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
+- [ ] OLM utils configured to use private registry
+- [ ] Cluster-scoped resources updated for shared components (licensing, scheduling)
+- [ ] Cluster-scoped resources updated for CPD instance
+- [ ] Image pull secrets configured in all required namespaces
+- [ ] Catalog sources pointing to private registry
+- [ ] All prerequisites validated and confirmed
+
+---
 
 
 
