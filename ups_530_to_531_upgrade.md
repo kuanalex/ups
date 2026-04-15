@@ -5,10 +5,10 @@
 ```
 CPD: 5.3.0
 OCP: 4.17
-Storage: Netapp
+Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 ```
 
 **To:**
@@ -16,10 +16,10 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate
 ```
 CPD: 5.3.1
 OCP: None
-Storage: Netapp
+Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 ```
 
 ---
@@ -33,13 +33,13 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate
 
 | Field | Value |
 |-------|-------|
-| **Generated** | 2026-04-14 11:11:13 UTC |
+| **Generated** | 2026-04-15 11:39:05 UTC |
 | **Generator Version** | 1.2.0 |
 | **Cluster Name** | UPS Production Cluster |
 | **Current CPD Version** | v5.3.0 |
 | **Target CPD Version** | v5.3.1 |
 | **OpenShift Version** | 4.17 |
-| **Storage Vendor** | Netapp |
+| **Storage Vendor** | Google Cloud Netapp Volumes and Persistent Disk on Google Cloud |
 | **Internet Access** | Airgap |
 | **Services Count** | 8 |
 | **Estimated Duration** | 5 hours 50 minutes |
@@ -73,8 +73,8 @@ The following 8 services will be upgraded:
 - **Db2 OLTP**
 - **Watson Speech**
 - **Voice Gateway**
-- **Watsonx Orchestrate**
 - **Watsonx Ai**
+- **Watsonx Orchestrate**
 - **Cognos Analytics**
 - **Watsonx Governance**
 
@@ -193,7 +193,7 @@ export IMAGE_PULL_CREDENTIALS=${PRIVATE_REGISTRY_PULL_USER}:${PRIVATE_REGISTRY_P
 export IMAGE_PULL_PREFIX=${PRIVATE_REGISTRY_LOCATION}
 
 # Components to Upgrade
-export COMPONENTS=cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+export COMPONENTS=cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 
 EOF
 
@@ -310,253 +310,29 @@ The following services require advanced infrastructure components:
 
 Multi-Cloud Object Gateway provides S3-compatible object storage for CP4D services that require large-scale data storage.
 
-**Installation Steps:**
+**⚠️ PREREQUISITE**: MCG/ODF must already be installed and configured. This is an upgrade runbook - storage infrastructure should already be in place.
 
-1. **Verify OpenShift Data Foundation (ODF) is installed:**
+**Verification Steps:**
 
 ```bash
-# Check if ODF operator is installed
+# Verify ODF operator is installed
 oc get csv -n openshift-storage | grep ocs-operator
 
-# Check NooBaa system status
+# Verify NooBaa system is running
 oc get noobaa -n openshift-storage
+
+# Check MCG pods are healthy
+oc get pods -n openshift-storage | grep noobaa
+
+# Verify object bucket claims can be created
+oc get crd | grep objectbucketclaim
 ```
 
-2. **If ODF is not installed, install it:**
+**If MCG/ODF is not installed**, refer to IBM documentation:
+- [Installing OpenShift Data Foundation](https://docs.openshift.com/container-platform/latest/storage/persistent_storage/persistent-storage-ocs.html)
+- [Configuring Multi-Cloud Object Gateway](https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-multicloud-object-gateway)
 
-```bash
-# Create openshift-storage namespace
-oc create namespace openshift-storage
-
-# Label nodes for ODF (select 3+ worker nodes with sufficient storage)
-oc label node <node-name> cluster.ocs.openshift.io/openshift-storage=''
-
-# Install ODF operator via OperatorHub
-# Navigate to: OperatorHub → Search "OpenShift Data Foundation" → Install
-# Or use CLI:
-cat << EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: ocs-operator
-  namespace: openshift-storage
-spec:
-  channel: stable-4.10
-  name: ocs-operator
-  source: redhat-operators
-  sourceNamespace: openshift-marketplace
-EOF
-
-# Wait for operator to be ready
-oc wait --for=condition=Ready pod -l app=ocs-operator -n openshift-storage --timeout=300s
-```
-
-3. **Create Storage System:**
-
-```bash
-# Create StorageCluster
-cat << EOF | oc apply -f -
-apiVersion: ocs.openshift.io/v1
-kind: StorageCluster
-metadata:
-  name: ocs-storagecluster
-  namespace: openshift-storage
-spec:
-  manageNodes: false
-  monDataDirHostPath: /var/lib/rook
-  storageDeviceSets:
-  - count: 1
-    dataPVCTemplate:
-      spec:
-        accessModes:
-        - ReadWriteOnce
-        resources:
-          requests:
-            storage: 2Ti
-        storageClassName: csi-gce-pd-ssd
-        volumeMode: Block
-    name: ocs-deviceset
-    placement: {}
-    portable: true
-    replica: 3
-EOF
-
-# Wait for storage cluster to be ready (this may take 10-15 minutes)
-oc wait --for=condition=Ready storagecluster/ocs-storagecluster -n openshift-storage --timeout=900s
-```
-
-4. **Verify MCG is ready:**
-
-```bash
-# Check NooBaa status
-oc get noobaa -n openshift-storage
-# Expected output: NAME     MGMT-ENDPOINTS              S3-ENDPOINTS                IMAGE    PHASE   AGE
-#                  noobaa   [https://...]               [https://...]               ...      Ready   ...
-
-# Get MCG endpoint
-export MCG_ENDPOINT=$(oc get route s3 -n openshift-storage -o jsonpath='{.spec.host}')
-echo "MCG Endpoint: https://${MCG_ENDPOINT}"
-
-# Get MCG credentials
-export MCG_ACCESS_KEY=$(oc get secret noobaa-admin -n openshift-storage -o jsonpath='{.data.AWS_ACCESS_KEY_ID}' | base64 -d)
-export MCG_SECRET_KEY=$(oc get secret noobaa-admin -n openshift-storage -o jsonpath='{.data.AWS_SECRET_ACCESS_KEY}' | base64 -d)
-```
-
-5. **Create MCG buckets for services:**
-
-
-**For Watson Speech:**
-
-```bash
-# Create bucket: speech-models (Speech model storage)
-cat << EOF | oc apply -f -
-apiVersion: objectbucket.io/v1alpha1
-kind: ObjectBucketClaim
-metadata:
-  name: speech-models
-  namespace: cpd-instance
-spec:
-  generateBucketName: speech-models
-  storageClassName: ocs-storagecluster-ceph-rgw
-  additionalConfig:
-    bucketclass: noobaa-default-bucket-class
-EOF
-
-# Wait for bucket to be ready
-oc wait --for=condition=Ready obc/speech-models -n cpd-instance --timeout=120s
-# Create bucket: speech-data (Audio data storage)
-cat << EOF | oc apply -f -
-apiVersion: objectbucket.io/v1alpha1
-kind: ObjectBucketClaim
-metadata:
-  name: speech-data
-  namespace: cpd-instance
-spec:
-  generateBucketName: speech-data
-  storageClassName: ocs-storagecluster-ceph-rgw
-  additionalConfig:
-    bucketclass: noobaa-default-bucket-class
-EOF
-
-# Wait for bucket to be ready
-oc wait --for=condition=Ready obc/speech-data -n cpd-instance --timeout=120s
-
-# Create secret for watson_speech
-cat << EOF | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: watson-speech-mcg-secret
-  namespace: cpd-instance
-type: Opaque
-stringData:
-  accesskey: "${MCG_ACCESS_KEY}"
-  secretkey: "${MCG_SECRET_KEY}"
-  bucket: "speech-models"
-  endpoint: "https://${MCG_ENDPOINT}"
-EOF
-```
-
-**For Voice Gateway:**
-
-```bash
-# Create bucket: voice-gateway-recordings (Call recordings and logs)
-cat << EOF | oc apply -f -
-apiVersion: objectbucket.io/v1alpha1
-kind: ObjectBucketClaim
-metadata:
-  name: voice-gateway-recordings
-  namespace: cpd-instance
-spec:
-  generateBucketName: voice-gateway-recordings
-  storageClassName: ocs-storagecluster-ceph-rgw
-  additionalConfig:
-    bucketclass: noobaa-default-bucket-class
-EOF
-
-# Wait for bucket to be ready
-oc wait --for=condition=Ready obc/voice-gateway-recordings -n cpd-instance --timeout=120s
-
-# Create secret for voice_gateway
-cat << EOF | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: voice-gateway-mcg-secret
-  namespace: cpd-instance
-type: Opaque
-stringData:
-  accesskey: "${MCG_ACCESS_KEY}"
-  secretkey: "${MCG_SECRET_KEY}"
-  bucket: "voice-gateway-recordings"
-  endpoint: "https://${MCG_ENDPOINT}"
-EOF
-```
-
-**For Watsonx Ai:**
-
-```bash
-# Create bucket: watsonx-ai-models (Foundation model storage)
-cat << EOF | oc apply -f -
-apiVersion: objectbucket.io/v1alpha1
-kind: ObjectBucketClaim
-metadata:
-  name: watsonx-ai-models
-  namespace: cpd-instance
-spec:
-  generateBucketName: watsonx-ai-models
-  storageClassName: ocs-storagecluster-ceph-rgw
-  additionalConfig:
-    bucketclass: noobaa-default-bucket-class
-EOF
-
-# Wait for bucket to be ready
-oc wait --for=condition=Ready obc/watsonx-ai-models -n cpd-instance --timeout=120s
-# Create bucket: watsonx-ai-data (Training data and artifacts)
-cat << EOF | oc apply -f -
-apiVersion: objectbucket.io/v1alpha1
-kind: ObjectBucketClaim
-metadata:
-  name: watsonx-ai-data
-  namespace: cpd-instance
-spec:
-  generateBucketName: watsonx-ai-data
-  storageClassName: ocs-storagecluster-ceph-rgw
-  additionalConfig:
-    bucketclass: noobaa-default-bucket-class
-EOF
-
-# Wait for bucket to be ready
-oc wait --for=condition=Ready obc/watsonx-ai-data -n cpd-instance --timeout=120s
-
-# Create secret for watsonx_ai
-cat << EOF | oc apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: watsonx-ai-mcg-secret
-  namespace: cpd-instance
-type: Opaque
-stringData:
-  accesskey: "${MCG_ACCESS_KEY}"
-  secretkey: "${MCG_SECRET_KEY}"
-  bucket: "watsonx-ai-models"
-  endpoint: "https://${MCG_ENDPOINT}"
-EOF
-```
-
-**Validation:**
-
-```bash
-# NooBaa system is ready
-oc get noobaa -n openshift-storage
-# CephObjectStore is ready
-oc get cephobjectstore -n openshift-storage
-```
-
-**Estimated Time**: 30-45 minutes
-
-**Documentation**: [https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-multicloud-object-gateway](https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-multicloud-object-gateway)
+**Estimated Verification Time**: 5-10 minutes
 
 
 
@@ -1250,36 +1026,7 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 - Test telephony connections
 - Verify call routing rules
 
-#### 4.3.5 Upgrade Watsonx Orchestrate
-
-```bash
-# Upgrade watsonx_orchestrate (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_orchestrate \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_orchestrate upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_orchestrate
-
-# Check watsonx_orchestrate pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
-```
-
-**Special Requirements for Watsonx Orchestrate:**
-- Backup automation workflows
-- Export skill configurations
-- Verify integration endpoints
-
-#### 4.3.6 Upgrade Watsonx Ai
+#### 4.3.5 Upgrade Watsonx Ai
 
 ```bash
 # Upgrade watsonx_ai (5.3.x method)
@@ -1308,6 +1055,35 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
 - Backup foundation model configurations
 - Verify model deployment endpoints
 - Check prompt template library
+
+#### 4.3.6 Upgrade Watsonx Orchestrate
+
+```bash
+# Upgrade watsonx_orchestrate (5.3.x method)
+cpd-cli manage install-components \
+  --license_acceptance=true \
+  --components=watsonx_orchestrate \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
+  --image_pull_secret=${IMAGE_PULL_SECRET} \
+  --run_storage_tests=false \
+  --upgrade=true
+
+# Monitor watsonx_orchestrate upgrade
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_orchestrate
+
+# Check watsonx_orchestrate pods
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
+```
+
+**Special Requirements for Watsonx Orchestrate:**
+- Backup automation workflows
+- Export skill configurations
+- Verify integration endpoints
 
 #### 4.3.7 Upgrade Cognos Analytics
 
