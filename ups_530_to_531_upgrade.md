@@ -15,7 +15,7 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_
 
 ```
 CPD: 5.3.1
-OCP: None
+OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
