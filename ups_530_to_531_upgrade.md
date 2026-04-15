@@ -8,18 +8,18 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
 **To:**
 
 ```
 CPD: 5.3.1
-OCP: 4.17
+OCP: None
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
 ---
@@ -33,7 +33,7 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_
 
 | Field | Value |
 |-------|-------|
-| **Generated** | 2026-04-15 11:39:05 UTC |
+| **Generated** | 2026-04-15 12:38:15 UTC |
 | **Generator Version** | 1.2.0 |
 | **Cluster Name** | UPS Production Cluster |
 | **Current CPD Version** | v5.3.0 |
@@ -42,7 +42,7 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_
 | **Storage Vendor** | Google Cloud Netapp Volumes and Persistent Disk on Google Cloud |
 | **Internet Access** | Airgap |
 | **Services Count** | 8 |
-| **Estimated Duration** | 5 hours 50 minutes |
+| **Estimated Duration** | 17 hours 5 minutes |
 
 ---
 
@@ -73,14 +73,14 @@ The following 8 services will be upgraded:
 - **Db2 OLTP**
 - **Watson Speech**
 - **Voice Gateway**
-- **Watsonx Ai**
 - **Watsonx Orchestrate**
+- **Watsonx Ai**
 - **Cognos Analytics**
 - **Watsonx Governance**
 
 ### Key Requirements
 
-- **CPD CLI Version**: 14.3.1
+- **CPD CLI Version**: 14.3.1.2
 - **Helm Version**: 3.16.3
 - **Storage**: Netapp
   - Block Storage Class: csi-gce-pd-ssd
@@ -113,7 +113,7 @@ Ensure the following tools are installed and configured:
 # Verify OpenShift CLI
 oc version
 
-# Verify CPD CLI version 14.3.1
+# Verify CPD CLI version 14.3.1.2
 cpd-cli version
 
 # Verify Helm version 3.16.3
@@ -126,6 +126,27 @@ jq --version
 podman version
 ```
 
+**Install/Update CPD CLI 14.3.1.2:**
+
+```bash
+# Download and extract cpd-cli 14.3.1.2
+wget https://github.com/IBM/cpd-cli/releases/download/v14.3.1.2/cpd-cli-linux-EE-14.3.1.2.tgz && \
+gzip -d cpd-cli-linux-EE-14.3.1.2.tgz && \
+tar -xvf cpd-cli-linux-EE-14.3.1.2.tar && \
+rm -rf cpd-cli-linux-EE-14.3.1.2.tar
+
+# Verify installation (directory name includes build number)
+cd cpd-cli-linux-EE-*/ && ./cpd-cli version && cd ..
+
+# Add to PATH
+export PATH=$PWD/cpd-cli-linux-EE-*:$PATH
+cpd-cli version
+```
+
+**Release Information:**
+- **GitHub Release**: [v14.3.1.2](https://github.com/IBM/cpd-cli/releases/tag/v14.3.1.2)
+- **Download URL**: https://github.com/IBM/cpd-cli/releases/download/v14.3.1.2/cpd-cli-linux-EE-14.3.1.2.tgz
+
 ### 2.2 Access Requirements
 
 - [ ] OpenShift cluster admin access
@@ -135,80 +156,28 @@ podman version
 
 ### 2.3 Environment Variables Setup (cpd_vars.sh)
 
-Create or update your `cpd_vars.sh` file with all required environment variables:
+Ensure that your environment variables script includes the correct information for the instance of IBM Software Hub that you want to upgrade.
+
+**Required Environment Variables:**
+- CPD Version: `5.3.1`
+- CPD CLI Version: `14.3.1.2`
+- OCP URL: `UPDATE_WITH_OCP_URL`
+- Operators Namespace: `cpd-operators`
+- Operands Namespace: `cpd-instance`
+- Block Storage Class: `csi-gce-pd-ssd`
+- File Storage Class: `gcnv-standard-k8s`
+- Components: `cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance`
+- Private Registry: `UPDATE_WITH_PRIVATE_REGISTRY_URL`
+
+**Documentation**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cri-updating-your-environment-variables-script-1)
+
+**Verify environment variables:**
 
 ```bash
-# Create/edit cpd_vars.sh
-cat > cpd_vars.sh << 'EOF'
-#!/bin/bash
-
-# =============================================================================
-# CP4D Upgrade Environment Variables
-# =============================================================================
-
-# CPD Version
-export VERSION=5.3.1
-
-# OLM Utils Image
-export OLM_UTILS_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:14.3.1
-
-# CPD CLI Path
-export PATH=/root/cpd-cli-linux-EE-14.3.1:$PATH
-
-# OpenShift Cluster Configuration
-export OCP_URL=UPDATE_WITH_OCP_URL
-export OPENSHIFT_TYPE=selfmanaged
-export IMAGE_ARCH=amd64
-export OCP_USERNAME=kubeadmin
-export OCP_PASSWORD=REPLACE_WITH_YOUR_PASSWORD
-
-# Login Command Shortcuts
-export SERVER_ARGUMENTS="--server=${OCP_URL}"
-export LOGIN_ARGUMENTS="--username=${OCP_USERNAME} --password=${OCP_PASSWORD}"
-export CPDM_OC_LOGIN="cpd-cli manage login-to-ocp ${SERVER_ARGUMENTS} ${LOGIN_ARGUMENTS}"
-export OC_LOGIN="oc login ${OCP_URL} ${LOGIN_ARGUMENTS}"
-
-# CP4D Namespaces
-export PROJECT_CPD_INST_OPERATORS=cpd-operators
-export PROJECT_CPD_INST_OPERANDS=cpd-instance
-export PROJECT_CERT_MANAGER=ibm-cert-manager
-export PROJECT_LICENSE_SERVICE=ibm-licensing
-export PROJECT_SCHEDULING_SERVICE=ibm-common-services
-
-# Storage Classes
-export STG_CLASS_BLOCK=csi-gce-pd-ssd
-export STG_CLASS_FILE=gcnv-standard-k8s
-
-# IBM Entitlement
-export IBM_ENTITLEMENT_KEY=REPLACE_WITH_YOUR_ENTITLEMENT_KEY
-
-# Private Registry Configuration
-export PRIVATE_REGISTRY_LOCATION=UPDATE_WITH_PRIVATE_REGISTRY_URL
-export PRIVATE_REGISTRY_PULL_USER=REPLACE_WITH_REGISTRY_USER
-export PRIVATE_REGISTRY_PULL_PASSWORD=REPLACE_WITH_REGISTRY_PASSWORD
-
-# Image Registry Configuration
-export IMAGE_PULL_SECRET=ibm-entitlement-key
-export IMAGE_PULL_CREDENTIALS=${PRIVATE_REGISTRY_PULL_USER}:${PRIVATE_REGISTRY_PULL_PASSWORD}
-export IMAGE_PULL_PREFIX=${PRIVATE_REGISTRY_LOCATION}
-
-# Components to Upgrade
-export COMPONENTS=cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
-
-EOF
-
-chmod +x cpd_vars.sh
-```
-
-**Source the environment variables:**
-
-```bash
+# Source your environment variables script
 source cpd_vars.sh
-```
 
-**Verify environment variables are set:**
-
-```bash
+# Verify key variables are set
 echo "CPD Version: ${VERSION}"
 echo "OCP URL: ${OCP_URL}"
 echo "Operators Namespace: ${PROJECT_CPD_INST_OPERATORS}"
@@ -1026,7 +995,36 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 - Test telephony connections
 - Verify call routing rules
 
-#### 4.3.5 Upgrade Watsonx Ai
+#### 4.3.5 Upgrade Watsonx Orchestrate
+
+```bash
+# Upgrade watsonx_orchestrate (5.3.x method)
+cpd-cli manage install-components \
+  --license_acceptance=true \
+  --components=watsonx_orchestrate \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
+  --image_pull_secret=${IMAGE_PULL_SECRET} \
+  --run_storage_tests=false \
+  --upgrade=true
+
+# Monitor watsonx_orchestrate upgrade
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_orchestrate
+
+# Check watsonx_orchestrate pods
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
+```
+
+**Special Requirements for Watsonx Orchestrate:**
+- Backup automation workflows
+- Export skill configurations
+- Verify integration endpoints
+
+#### 4.3.6 Upgrade Watsonx Ai
 
 ```bash
 # Upgrade watsonx_ai (5.3.x method)
@@ -1055,35 +1053,6 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
 - Backup foundation model configurations
 - Verify model deployment endpoints
 - Check prompt template library
-
-#### 4.3.6 Upgrade Watsonx Orchestrate
-
-```bash
-# Upgrade watsonx_orchestrate (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_orchestrate \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_orchestrate upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_orchestrate
-
-# Check watsonx_orchestrate pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
-```
-
-**Special Requirements for Watsonx Orchestrate:**
-- Backup automation workflows
-- Export skill configurations
-- Verify integration endpoints
 
 #### 4.3.7 Upgrade Cognos Analytics
 
