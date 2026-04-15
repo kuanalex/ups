@@ -33,7 +33,7 @@ Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate
 
 | Field | Value |
 |-------|-------|
-| **Generated** | 2026-04-15 12:38:15 UTC |
+| **Generated** | 2026-04-15 16:20:28 UTC |
 | **Generator Version** | 1.2.0 |
 | **Cluster Name** | UPS Production Cluster |
 | **Current CPD Version** | v5.3.0 |
@@ -271,297 +271,53 @@ Verify the following before proceeding:
 
 ### 2.7 Advanced Service Prerequisites
 
-The following services require advanced infrastructure components:
+Some services require additional prerequisite software that may need to be upgraded depending on your upgrade path and cluster configuration. Review the following documentation to determine if any actions are required for your environment:
 
-#### 2.7.1 Multi-Cloud Object Gateway (MCG)
+#### 2.7.1 Upgrading Prerequisite Software
+
+**Documentation**: [Upgrading prerequisite software](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-upgrading-prerequisite-software-1)
+
+This section covers general prerequisite software upgrades that may be required before upgrading IBM Software Hub.
+
+
+#### 2.7.2 Multicloud Object Gateway (MCG)
 
 **Required for**: Watson Speech, Voice Gateway, Watsonx Ai
 
-Multi-Cloud Object Gateway provides S3-compatible object storage for CP4D services that require large-scale data storage.
+**Note**: Multicloud Object Gateway is part of Red Hat OpenShift Data Foundation (ODF). MCG should be addressed during your storage upgrade or OpenShift Container Platform upgrade. Refer to the documentation below for guidance.
 
-**⚠️ PREREQUISITE**: MCG/ODF must already be installed and configured. This is an upgrade runbook - storage infrastructure should already be in place.
-
-**Verification Steps:**
-
-```bash
-# Verify ODF operator is installed
-oc get csv -n openshift-storage | grep ocs-operator
-
-# Verify NooBaa system is running
-oc get noobaa -n openshift-storage
-
-# Check MCG pods are healthy
-oc get pods -n openshift-storage | grep noobaa
-
-# Verify object bucket claims can be created
-oc get crd | grep objectbucketclaim
-```
-
-**If MCG/ODF is not installed**, refer to IBM documentation:
-- [Installing OpenShift Data Foundation](https://docs.openshift.com/container-platform/latest/storage/persistent_storage/persistent-storage-ocs.html)
-- [Configuring Multi-Cloud Object Gateway](https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-multicloud-object-gateway)
-
-**Estimated Verification Time**: 5-10 minutes
+**Documentation**: [Upgrading Multicloud Object Gateway for IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-multicloud-object-gateway-1)
 
 
 
-#### 2.7.2 Knative Eventing and Serving
+#### 2.7.3 Upgrading Red Hat OpenShift Serverless Knative Eventing
 
 **Required for**: Watsonx Orchestrate
 
-Knative enables event-driven architecture and automatic scaling for CP4D services.
+**Documentation**: [Upgrading Red Hat OpenShift Serverless Knative Eventing](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing-1)
 
-**Installation Steps:**
+If your environment includes services with a dependency on Red Hat OpenShift Serverless Knative Eventing, you must ensure you are running a supported version.
 
-1. **Install OpenShift Serverless Operator:**
-
+**Quick version check:**
 ```bash
-# Create namespace
-oc create namespace openshift-serverless
-
-# Install operator
-cat << EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: serverless-operator
-  namespace: openshift-serverless
-spec:
-  channel: stable
-  name: serverless-operator
-  source: redhat-operators
-  sourceNamespace: openshift-marketplace
-EOF
-
-# Wait for operator to be ready
-oc wait --for=condition=Ready pod -l name=knative-openshift -n openshift-serverless --timeout=300s
+# Check current Serverless Operator version
+oc get csv -n openshift-serverless | grep serverless-operator
 ```
 
-2. **Install Knative Serving:**
-
-```bash
-# Create Knative Serving namespace
-oc create namespace knative-serving
-
-# Install Knative Serving
-cat << EOF | oc apply -f -
-apiVersion: operator.knative.dev/v1beta1
-kind: KnativeServing
-metadata:
-  name: knative-serving
-  namespace: knative-serving
-spec:
-  config:
-    autoscaler:
-      min-scale: "0"
-      max-scale: "10"
-      target-concurrency: "100"
-      scale-down-delay: "30s"
-    deployment:
-      resources:
-        requests:
-          cpu: 100m
-          memory: 128Mi
-        limits:
-          cpu: 1000m
-          memory: 1Gi
-    domain:
-      svc.cluster.local: ""
-EOF
-
-# Wait for Knative Serving to be ready
-oc wait --for=condition=Ready knativeserving/knative-serving -n knative-serving --timeout=600s
-```
-
-3. **Install Knative Eventing:**
-
-```bash
-# Create Knative Eventing namespace
-oc create namespace knative-eventing
-
-# Install Knative Eventing
-cat << EOF | oc apply -f -
-apiVersion: operator.knative.dev/v1beta1
-kind: KnativeEventing
-metadata:
-  name: knative-eventing
-  namespace: knative-eventing
-spec:
-  defaultBrokerClass: MTChannelBasedBroker
-  config:
-    br-default-channel:
-      channel-template-spec: |
-        apiVersion: messaging.knative.dev/v1
-        kind: InMemoryChannel
-EOF
-
-# Wait for Knative Eventing to be ready
-oc wait --for=condition=Ready knativeeventing/knative-eventing -n knative-eventing --timeout=600s
-```
-
-4. **Configure service-specific Knative settings:**
+Compare with requirements in [Platform Agnostic Operators](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=requirements-platform-agnostic-operators).
 
 
-**For Watsonx Orchestrate:**
-- Min Scale: 0
-- Max Scale: 10
-- Target Concurrency: 50
+#### 2.7.4 Upgrading Operators for Services that Require GPUs
 
+**Documentation**: [Upgrading operators for services that require GPUs](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-operators-services-that-require-gpus-1)
 
-**Validation:**
+If your environment includes services that require GPU support, you may need to upgrade related operators before upgrading IBM Software Hub.
 
-```bash
-# KnativeServing is ready
-oc get knativeserving -n knative-serving
-# KnativeEventing is ready
-oc get knativeeventing -n knative-eventing
-```
+#### 2.7.5 Upgrading Red Hat OpenShift AI
 
-**Estimated Time**: 20-30 minutes
+**Documentation**: [Upgrading Red Hat OpenShift AI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-ai-1)
 
-**Documentation**: [https://docs.redhat.com/en/documentation/red_hat_openshift_serverless](https://docs.redhat.com/en/documentation/red_hat_openshift_serverless)
-
-
-
-#### 2.7.3 Events Operator
-
-**Required for**: Watsonx Orchestrate
-
-The Events Operator manages event sources, sinks, and brokers for event-driven CP4D workflows.
-
-**Installation Steps:**
-
-1. **Install Events Operator:**
-
-```bash
-# Install operator via OLM
-cat << EOF | oc apply -f -
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: ibm-events-operator
-  namespace: ibm-common-services
-spec:
-  channel: v4
-  name: ibm-events-operator
-  source: ibm-operator-catalog
-  sourceNamespace: openshift-marketplace
-EOF
-
-# Wait for operator to be ready
-oc wait --for=condition=Ready pod -l app.kubernetes.io/name=ibm-events-operator -n ibm-common-services --timeout=300s
-```
-
-2. **Create Event Broker:**
-
-```bash
-# Create Kafka-based event broker
-cat << EOF | oc apply -f -
-apiVersion: eventstreams.ibm.com/v1beta2
-kind: EventStreams
-metadata:
-  name: cpd-event-broker
-  namespace: ibm-common-services
-spec:
-  version: 4.0.0
-  license:
-    accept: true
-    use: CloudPakForDataNonProduction
-  strimziOverrides:
-    kafka:
-      replicas: 3
-      storage:
-        type: persistent-claim
-        size: 100Gi
-        class: {{ STG_CLASS_BLOCK }}
-      config:
-        log.retention.hours: 168
-        offsets.topic.replication.factor: 3
-        transaction.state.log.replication.factor: 3
-        transaction.state.log.min.isr: 2
-    zookeeper:
-      replicas: 3
-      storage:
-        type: persistent-claim
-        size: 10Gi
-        class: {{ STG_CLASS_BLOCK }}
-EOF
-
-# Wait for event broker to be ready (this may take 10-15 minutes)
-oc wait --for=condition=Ready eventstreams/cpd-event-broker -n ibm-common-services --timeout=900s
-```
-
-3. **Configure Event Sources:**
-
-Supported event source types:
-- http
-- kafka
-- cron
-- container
-
-**Validation:**
-
-```bash
-# Succeeded
-oc get csv -n ibm-common-services | grep ibm-events-operator
-# EventStreams is ready
-oc get eventstreams -n ibm-common-services
-```
-
-**Estimated Time**: 15-25 minutes
-
-**Documentation**: [https://www.ibm.com/docs/SSQNUZ_5.0.x/svc-welcome/events.html](https://www.ibm.com/docs/SSQNUZ_5.0.x/svc-welcome/events.html)
-
-
-#### 2.7.4 Installation Sequence Summary
-
-Follow this sequence for installing advanced prerequisites:
-
-**Step 1**: Install Multi-Cloud Object Gateway
-- Component: `mcg`
-- Estimated Time: 30 minutes
-
-**Step 2**: Install Knative Serving and Eventing
-- Component: `knative`
-- Estimated Time: 20 minutes
-
-**Step 3**: Install Events Operator
-- Component: `events_operator`
-- Estimated Time: 15 minutes
-- Prerequisites: knative
-
-**Step 4**: Create MCG buckets for services
-- Component: `mcg_buckets`
-- Estimated Time: 10 minutes
-- Prerequisites: mcg
-
-**Step 5**: Create service-specific secrets
-- Component: `service_secrets`
-- Estimated Time: 10 minutes
-- Prerequisites: mcg_buckets
-
-
-#### 2.7.5 Troubleshooting
-
-**Multi-Cloud Object Gateway:**
-- **Issue**: NooBaa pods not starting
-  - **Solution**: Check storage class availability and PVC binding
-- **Issue**: Bucket creation fails
-  - **Solution**: Verify NooBaa system is ready and has sufficient storage
-
-**Knative:**
-- **Issue**: Knative pods in CrashLoopBackOff
-  - **Solution**: Check resource limits and node capacity
-- **Issue**: Services not scaling
-  - **Solution**: Verify autoscaler configuration and metrics server
-
-**Events Operator:**
-- **Issue**: Event broker not starting
-  - **Solution**: Check Kafka cluster status and storage availability
-- **Issue**: Events not flowing
-  - **Solution**: Verify event source and sink configurations
-
----
+If your environment uses Red Hat OpenShift AI, review this documentation to determine if an upgrade is required before upgrading IBM Software Hub.
 
 
 ---
@@ -1120,7 +876,104 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_governance
 - Do not interrupt the upgrade process once started
 ---
 
-## 5. RSI Patch Management
+## 5. Service Instance Upgrades
+
+
+## Service Instance Upgrades
+
+**⚠️ IMPORTANT**: Some services require separate instance upgrades after the CR upgrade completes. Service instances are NOT automatically upgraded when you upgrade the service CR.
+
+### Prerequisites
+
+Before upgrading service instances, ensure you have:
+1. ✅ Completed all CR upgrades successfully
+2. ✅ Created a CPD profile with appropriate permissions
+3. ✅ Set the `CPD_PROFILE_NAME` environment variable
+
+**CPD Profile Requirements**:
+- User must have `can_provision` (Create service instances) permission
+- User must have `manage_service_instances` (Manage service instances) permission
+- Documentation: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cli-creating-cpd-profile)
+
+---
+
+### Services Requiring Instance Upgrades
+
+The following services in your configuration require manual instance upgrades:
+
+#### 1. Db2 OLTP
+
+**Service Type**: `db2oltp`
+
+**Step 1**: List all Db2 instances:
+```bash
+cpd-cli service-instance list \
+--service-type=db2oltp \
+--profile=${CPD_PROFILE_NAME}
+```
+
+**Step 2**: Check instance status:
+```bash
+# Set instance name
+export INSTANCE_NAME="<instance-name>"
+
+# Check if instance is running
+cpd-cli service-instance status ${INSTANCE_NAME} \
+--profile=${CPD_PROFILE_NAME} \
+--service-type=db2oltp
+```
+
+**Step 3**: Upgrade each instance individually:
+```bash
+cpd-cli service-instance upgrade \
+--service-type=db2oltp \
+--instance-name=${INSTANCE_NAME} \
+--profile=${CPD_PROFILE_NAME}
+```
+
+**Documentation**: [Upgrading Db2](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-db2)
+
+**⚠️ Important**: Instance must be in running state before upgrade
+
+
+---
+
+#### 2. Watson Speech
+
+**Service Type**: `speech`
+
+**Upgrade Command** (all instances):
+```bash
+cpd-cli service-instance upgrade \
+--service-type=speech \
+--profile=${CPD_PROFILE_NAME} \
+--all
+```
+
+**Documentation**: [Upgrading Watson Speech Services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-watson-speech-services)
+
+
+---
+
+
+### Service Instance Upgrade Checklist
+
+Use this checklist to track instance upgrades:
+
+- [ ] Db2 OLTP instances upgraded and validated
+- [ ] Watson Speech instances upgraded and validated
+
+### Notes
+
+- **Automatic Upgrades**: If you have Db2 Data Management Console (dmc), its instances upgrade automatically - no manual action needed
+- **Upgrade Order**: Upgrade service instances after all CR upgrades are complete
+- **Validation**: Always validate instance upgrades by listing instances and checking their versions
+- **Troubleshooting**: If an instance upgrade fails, check the instance logs and status before retrying
+
+
+---
+
+## 6. RSI Patch Management
 
 ## RSI Patch Management
 
@@ -1163,7 +1016,7 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ---
 ---
 
-## 6. Post-Upgrade Validation
+## 7. Post-Upgrade Validation
 
 ### 5.1 Platform Validation
 
@@ -1208,7 +1061,7 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep SERVICE_NAME
 
 ---
 
-## 7. Final Health and Status Check Post Upgrade
+## 8. Final Health and Status Check Post Upgrade
 
 ### Monitor Upgrade Progress
 
