@@ -52,7 +52,7 @@ All validation checks passed. The upgrade path is valid and can proceed.
 
 ## 1. Prerequisites
 
-### 1.1 Required Tools
+### Required Tools
 
 Ensure the following tools are installed and configured:
 
@@ -94,14 +94,15 @@ cpd-cli version
 - **GitHub Release**: [v14.3.1.2](https://github.com/IBM/cpd-cli/releases/tag/v14.3.1.2)
 - **Download URL**: https://github.com/IBM/cpd-cli/releases/download/v14.3.1.2/cpd-cli-linux-EE-14.3.1.2.tgz
 
-### 1.2 Access Requirements
+### Access Requirements
 
-- [ ] OpenShift cluster admin access
-- [ ] IBM Entitlement Key with appropriate permissions
-- [ ] Access to IBM Container Registry (cp.icr.io)
-- [ ] Access to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
+**Required Access:**
+- OpenShift cluster admin access
+- IBM Entitlement Key with appropriate permissions
+- Access to IBM Container Registry (cp.icr.io)
+- Access to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
-### 1.3 Environment Variables Setup (cpd_vars.sh)
+### Environment Variables Setup (cpd_vars.sh)
 
 Ensure that your environment variables script includes the correct information for the instance of IBM Software Hub that you want to upgrade.
 
@@ -134,7 +135,7 @@ echo "File Storage: ${STG_CLASS_FILE}"
 echo "Components: ${COMPONENTS}"
 ```
 
-### 2.4 Login to OpenShift Cluster
+### Login to OpenShift Cluster
 
 ```bash
 # Login using cpd-cli
@@ -148,7 +149,7 @@ oc whoami
 oc get nodes
 ```
 
-### 2.5 Restart OLM Utils Container
+### Restart OLM Utils Container
 
 ```bash
 # Restart the OLM utils container with updated environment
@@ -158,76 +159,36 @@ cpd-cli manage restart-container
 podman ps | grep olm-utils
 ```
 
-### 1.7 Air-Gapped Environment Prerequisites
+### Air-Gapped Environment Prerequisites
 
 
-**⚠️ IMPORTANT**: This cluster uses a private container registry in an air-gapped environment. The following prerequisites must be completed before proceeding with the upgrade.
+**⚠️ IMPORTANT**: Air-gapped environment detected. Complete these steps before upgrading.
 
 **Private Registry**: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
----
+**Required Steps** (see [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=requirements-preparing-upgrade-in-restricted-network)):
 
-#### Required Prerequisites for Air-Gapped Upgrades
-
-The following steps must be completed before starting the upgrade process. Refer to IBM documentation for detailed procedures:
-
-**1. Obtain OLM Utils v4 Image**
-   - **Reference**: [Obtaining the olm-utils-v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)
-   - Download the OLM utils image for air-gapped operations
-
-**2. Download CASE Packages**
-   - **Reference**: [Downloading CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)
-   - Download CASE packages for all components being upgraded
-
-**3. Mirror Images to Private Registry**
-   - **Option A (Direct)**: [Mirroring images directly to private container registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2)
-   - **Option B (Intermediary)**: [Mirroring images using intermediary container registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2)
-   - Mirror all required images to your private registry
-
-**4. Pull OLM Utils Image from Private Registry**
-   - **Reference**: [Pulling the olm-utils-v4 image from private container registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)
-   - Configure OLM utils to use your private registry
-
-**5. Update Cluster-Scoped Resources for Shared Components**
-   - **Reference**: [Updating cluster-scoped resources for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components-1)
-   - Update CASE packages for scheduling service and other shared components
-
-**6. Update Cluster-Scoped Resources for Platform and Services**
-   - **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
-   - Update CASE packages for CPD platform and all services
-
----
-
-#### Pre-Upgrade Checklist
-
-Verify the following before proceeding:
-
-- [ ] OLM utils v4 image obtained and configured
-- [ ] CASE packages downloaded for all components
-- [ ] Images mirrored to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
-- [ ] OLM utils configured to use private registry
-- [ ] Cluster-scoped resources updated for shared components (licensing, scheduling)
-- [ ] Cluster-scoped resources updated for CPD instance
-- [ ] Image pull secrets configured in all required namespaces
-- [ ] Catalog sources pointing to private registry
-- [ ] All prerequisites validated and confirmed
-
----
+1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
+2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)** for all components
+3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
+4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
+5. **[Update cluster resources](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components-1)** for shared components
+6. **[Update cluster resources](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)** for CPD instance
 
 
 
-### 1.7 Advanced Service Prerequisites
+### Advanced Service Prerequisites
 
 Some services require additional prerequisite software that may need to be upgraded depending on your upgrade path and cluster configuration. Review the following documentation to determine if any actions are required for your environment:
 
-#### 1.7.1 Upgrading Prerequisite Software
+#### Upgrading Prerequisite Software
 
 **Documentation**: [Upgrading prerequisite software](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-upgrading-prerequisite-software-1)
 
 This section covers general prerequisite software upgrades that may be required before upgrading IBM Software Hub.
 
 
-#### 1.7.2 Multicloud Object Gateway (MCG)
+#### Multicloud Object Gateway (MCG)
 
 **Required for**: Watson Speech, Voice Gateway, Watsonx Ai
 
@@ -237,7 +198,7 @@ This section covers general prerequisite software upgrades that may be required 
 
 
 
-#### 1.7.3 Upgrading Red Hat OpenShift Serverless Knative Eventing
+#### Upgrading Red Hat OpenShift Serverless Knative Eventing
 
 **Required for**: Watsonx Orchestrate
 
@@ -254,13 +215,13 @@ oc get csv -n openshift-serverless | grep serverless-operator
 Compare with requirements in [Platform Agnostic Operators](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=requirements-platform-agnostic-operators).
 
 
-#### 1.7.4 Upgrading Operators for Services that Require GPUs
+#### Upgrading Operators for Services that Require GPUs
 
 **Documentation**: [Upgrading operators for services that require GPUs](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-operators-services-that-require-gpus-1)
 
 If your environment includes services that require GPU support, you may need to upgrade related operators before upgrading IBM Software Hub.
 
-#### 1.7.5 Upgrading Red Hat OpenShift AI
+#### Upgrading Red Hat OpenShift AI
 
 **Documentation**: [Upgrading Red Hat OpenShift AI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-ai-1)
 
@@ -370,28 +331,11 @@ Complete the following backups for each service being upgraded:
 
 
 
-### Backup Verification Checklist
-
-Before proceeding with the upgrade, verify all backups are complete:
-
-- [ ] Global backups completed (5 items)
-  - [ ] Routes backup
-  - [ ] TemporaryPatch backup
-  - [ ] Custom Resources backup
-  - [ ] ConfigMaps backup
-  - [ ] Secrets backup
-
-
-
-
-
-
-
-- [ ] All backup files stored in secure location outside cluster
-- [ ] Backup files verified (non-zero size, readable)
-- [ ] Secrets backups encrypted and secured
+### Backup Verification
 
 ⚠️ **DO NOT PROCEED** with upgrade until all applicable backups are complete and verified.
+
+Verify backup files are stored securely outside the cluster, have non-zero size, and secrets are encrypted.
 
 ---
 
@@ -409,7 +353,7 @@ Before proceeding with the upgrade, verify all backups are complete:
 
 ## 3. Pre-Upgrade Health Check
 
-### 3.1 Run Comprehensive Health Check
+### Run Comprehensive Health Check
 
 ```bash
 # Run CPD health check (includes cluster, nodes, operands, operators)
@@ -426,7 +370,7 @@ cpd-cli health runcommand \
 # Review the output for any critical issues before proceeding
 ```
 
-### 3.2 Check for Hot Fixes and Patches
+### Check for Hot Fixes and Patches
 
 ```bash
 # Check for image_digests in service CRs (indicates hot fixes/patches)
@@ -444,7 +388,7 @@ done
 # Document any hot fixes/patches that need to be removed before upgrade
 ```
 
-### 3.3 Basic Cluster Validation
+### Basic Cluster Validation
 
 ```bash
 # Check node status
@@ -463,7 +407,7 @@ oc get pods --all-namespaces | grep -i crash
 oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 ```
 
-### 3.4 Storage Validation
+### Storage Validation
 
 ```bash
 # Verify storage classes
@@ -475,7 +419,7 @@ oc get pvc -n ${PROJECT_CPD_INST_OPERANDS}
 # Verify storage vendor health
 ```
 
-### 3.5 CPD Platform Validation
+### CPD Platform Validation
 
 ```bash
 # Check CPD operator status
@@ -494,7 +438,7 @@ oc get route cpd -n ${PROJECT_CPD_INST_OPERANDS}
 cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
 
-### 3.6 Service Validation
+### Service Validation
 
 Use the CPD CLI to check status for all services:
 
