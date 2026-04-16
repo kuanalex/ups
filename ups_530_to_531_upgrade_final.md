@@ -110,6 +110,7 @@ echo "Operands Namespace: ${PROJECT_CPD_INST_OPERANDS}"
 echo "Block Storage: ${STG_CLASS_BLOCK}"
 echo "File Storage: ${STG_CLASS_FILE}"
 echo "Components: ${COMPONENTS}"
+echo "Private Registry: ${PRIVATE_REGISTRY_LOCATION}"
 ```
 
 ### Login to OpenShift Cluster
