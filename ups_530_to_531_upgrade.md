@@ -55,13 +55,13 @@ Reference: [Mirroring images to private image registry](https://www.ibm.com/docs
 
 ## Table of Contents
 
-1. [Pre Upgrade Steps](#pre-upgrade-steps)
-2. [Pre Upgrade Backups](#pre-upgrade-backups)
-3. [Upgrade Execution](#upgrade-execution)
-4. [Service Instance Upgrades](#service-instance-upgrades)
-5. [Upgrade cpdbr Service](#upgrade-cpdbr-service)
-6. [RSI Patch Management](#rsi-patch-management)
-7. [Post Upgrade Validation](#post-upgrade-validation)
+- [Pre Upgrade Steps](#pre-upgrade-steps)
+- [Pre Upgrade Backups](#pre-upgrade-backups)
+- [Upgrade Execution](#upgrade-execution)
+- [Service Instance Upgrades](#service-instance-upgrades)
+- [Upgrade cpdbr Service](#upgrade-cpdbr-service)
+- [RSI Patch Management](#rsi-patch-management)
+- [Post Upgrade Validation](#post-upgrade-validation)
 
 ---
 
@@ -74,7 +74,6 @@ Ensure the following tools are installed and updated to the required versions:
 - **IBM Software Hub CLI**: Version 14.3.1.2
 - **OpenShift CLI (oc)**: Compatible version for your cluster
 - **Helm CLI**: Version 3.16.3
-- **Additional utilities**: jq, podman
 
 **Installation and Update Instructions:**
 
@@ -150,8 +149,8 @@ podman ps | grep olm-utils
 2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)** for all components
 3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
 4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
-5. **[Update cluster resources](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components-1)** for shared components
-6. **[Update cluster resources](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)** for CPD instance
+
+**Note**: Cluster-scoped resources and entitlements are applied in the [Upgrade Execution](#upgrade-execution) section.
 
 
 
@@ -267,7 +266,114 @@ cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPE
 
 ## Upgrade Execution
 
-### 4.1 Upgrade Shared Cluster Components
+### 4.1 Prepare Cluster for Upgrade
+
+#### 4.1.1 Update Cluster-Scoped Resources for Shared Components
+
+**Reference**: [Updating cluster-scoped resources for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components-1)
+
+```bash
+# Generate cluster-scoped resource definitions for scheduling service
+cpd-cli manage case-download \
+  --components=scheduler \
+  --release=${VERSION} \
+  --scheduler_ns=${PROJECT_SCHEDULING_SERVICE} \
+  --cluster_resources=true
+
+# Change to work directory
+cd cpd-cli-workspace/olm-utils-workspace/work
+
+# Apply cluster-scoped resources
+oc apply -f cluster_scoped_resources.yaml \
+  --server-side \
+  --force-conflicts
+
+# Optional: Keep a record
+mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_SCHEDULING_SERVICE}-cluster_scoped_resources.yaml
+
+# Return to base directory
+cd -
+```
+
+#### 4.1.2 Update Cluster-Scoped Resources for CPD Instance
+
+**Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
+
+```bash
+# Generate cluster-scoped resource definitions for CPD instance
+cpd-cli manage case-download \
+  --components=${COMPONENTS} \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --cluster_resources=true
+
+# Change to work directory
+cd cpd-cli-workspace/olm-utils-workspace/work
+
+# Apply cluster-scoped resources
+oc apply -f cluster_scoped_resources.yaml \
+  --server-side \
+  --force-conflicts
+
+# Optional: Keep a record
+mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_CPD_INST_OPERATORS}-cluster_scoped_resources.yaml
+
+# Return to base directory
+cd -
+```
+
+#### 4.1.3 Apply Entitlements
+
+**Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
+
+```bash
+# Apply IBM Cloud Pak for Data Enterprise Edition entitlement
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=cpd-enterprise \
+  --production=true
+
+# Apply watsonx.ai license
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=watsonx-ai \
+  --production=true
+
+# Apply watsonx.governance licenses
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=watsonx-gov-mm \
+  --production=true
+
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=watsonx-gov-rc \
+  --production=true
+
+# Apply watsonx Orchestrate license
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=watsonx-orchestrate \
+  --production=true
+
+# Apply Watson Speech licenses
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=speech-to-text
+
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=text-to-speech
+
+# Apply Cognos Analytics license
+cpd-cli manage apply-entitlement \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --entitlement=cognos-analytics
+```
+
+---
+
+### 4.2 Upgrade Shared Cluster Components
 
 #### 4.2.1 Upgrade IBM Licensing
 
@@ -284,7 +390,7 @@ cpd-cli manage apply-cluster-components \
 oc get pods -n ${PROJECT_LICENSE_SERVICE}
 ```
 
-#### 4.1.2 Upgrade Scheduler (if installed)
+#### 4.2.2 Upgrade Scheduler (if installed)
 
 **Reference**: [Upgrading the scheduling service](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.3.x?topic=components-upgrading-scheduling-service)
 
@@ -304,7 +410,7 @@ oc get pods -n ${PROJECT_SCHEDULING_SERVICE}
 
 ---
 
-### 4.2 Upgrade IBM Software Hub Platform
+### 4.3 Upgrade IBM Software Hub Platform
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
 
@@ -333,7 +439,7 @@ oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.
 
 ---
 
-### 4.3 Upgrade Services
+### 4.4 Upgrade Services
 
 **Option 1: Batch Upgrade (Recommended for Most Cases)**
 
@@ -363,7 +469,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 
 Upgrade services one at a time for better monitoring and troubleshooting:
 
-#### 4.3.2 Upgrade Db2 OLTP
+#### 4.4.2 Upgrade Db2 OLTP
 
 ```bash
 # Upgrade db2oltp (5.3.x method)
@@ -387,7 +493,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep db2oltp
 ```
 
-#### 4.3.3 Upgrade Watson Speech
+#### 4.4.3 Upgrade Watson Speech
 
 ```bash
 # Upgrade watson_speech (5.3.x method)
@@ -411,7 +517,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watson_speech
 ```
 
-#### 4.3.4 Upgrade Voice Gateway
+#### 4.4.4 Upgrade Voice Gateway
 
 ```bash
 # Upgrade voice_gateway (5.3.x method)
@@ -435,7 +541,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 ```
 
-#### 4.3.5 Upgrade Watsonx Orchestrate
+#### 4.4.5 Upgrade Watsonx Orchestrate
 
 ```bash
 # Upgrade watsonx_orchestrate (5.3.x method)
@@ -459,7 +565,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
 ```
 
-#### 4.3.6 Upgrade Watsonx Ai
+#### 4.4.6 Upgrade Watsonx Ai
 
 ```bash
 # Upgrade watsonx_ai (5.3.x method)
@@ -483,7 +589,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
 ```
 
-#### 4.3.7 Upgrade Cognos Analytics
+#### 4.4.7 Upgrade Cognos Analytics
 
 ```bash
 # Upgrade cognos_analytics (5.3.x method)
@@ -507,7 +613,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep cognos_analytics
 ```
 
-#### 4.3.8 Upgrade Watsonx Governance
+#### 4.4.8 Upgrade Watsonx Governance
 
 ```bash
 # Upgrade watsonx_governance (5.3.x method)
