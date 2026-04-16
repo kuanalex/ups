@@ -8,7 +8,7 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
 **To:**
@@ -19,7 +19,7 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
 ---
@@ -262,8 +262,8 @@ oc get pvc -n ${PROJECT_CPD_INST_OPERANDS}
 # Check CR status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 
-# Check for pods not in Completed status
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} --field-selector=status.phase!=Succeeded
+# Check for pods not running correctly (excludes completed jobs)
+oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 
 # List service instances
 cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
@@ -441,31 +441,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 ```
 
-#### 4.3.5 Upgrade Watsonx Ai
-
-```bash
-# Upgrade watsonx_ai (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_ai \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_ai upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_ai
-
-# Check watsonx_ai pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
-```
-
-#### 4.3.6 Upgrade Watsonx Orchestrate
+#### 4.3.5 Upgrade Watsonx Orchestrate
 
 ```bash
 # Upgrade watsonx_orchestrate (5.3.x method)
@@ -487,6 +463,30 @@ cpd-cli manage get-cr-status \
 
 # Check watsonx_orchestrate pods
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
+```
+
+#### 4.3.6 Upgrade Watsonx Ai
+
+```bash
+# Upgrade watsonx_ai (5.3.x method)
+cpd-cli manage install-components \
+  --license_acceptance=true \
+  --components=watsonx_ai \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
+  --image_pull_secret=${IMAGE_PULL_SECRET} \
+  --run_storage_tests=false \
+  --upgrade=true
+
+# Monitor watsonx_ai upgrade
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_ai
+
+# Check watsonx_ai pods
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
 ```
 
 #### 4.3.7 Upgrade Cognos Analytics
@@ -676,8 +676,8 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 # Check CR status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 
-# Check for pods not in Completed status
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} --field-selector=status.phase!=Succeeded
+# Check for pods not running correctly (excludes completed jobs)
+oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 
 # Verify CPD version
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
