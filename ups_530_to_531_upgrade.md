@@ -8,7 +8,7 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 ```
 
 **To:**
@@ -19,73 +19,20 @@ OCP: None
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 ```
-
----
-
-# CP4D 5.3.0 → 5.3.1 Upgrade Runbook
-**UPS Production Cluster**
-
----
-
-## Document Information
-
-| Field | Value |
-|-------|-------|
-| **Generated** | 2026-04-15 16:20:28 UTC |
-| **Generator Version** | 1.2.0 |
-| **Cluster Name** | UPS Production Cluster |
-| **Current CPD Version** | v5.3.0 |
-| **Target CPD Version** | v5.3.1 |
-| **OpenShift Version** | 4.17 |
-| **Storage Vendor** | Google Cloud Netapp Volumes and Persistent Disk on Google Cloud |
-| **Internet Access** | Airgap |
-| **Services Count** | 8 |
-| **Estimated Duration** | 17 hours 5 minutes |
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Prerequisites](#prerequisites)
-3. [Pre-Upgrade Backups](#pre-upgrade-backups)
-4. [Upgrade Execution](#upgrade-execution)
-5. [RSI Patch Management](#rsi-patch-management)
-6. [Post-Upgrade Validation](#post-upgrade-validation)
+1. [Prerequisites](#prerequisites)
+2. [Pre-Upgrade Backups](#pre-upgrade-backups)
+3. [Upgrade Execution](#upgrade-execution)
+4. [RSI Patch Management](#rsi-patch-management)
+5. [Post-Upgrade Validation](#post-upgrade-validation)
 
 ---
-
-## 1. Overview
-
-This runbook provides step-by-step instructions for upgrading Cloud Pak for Data from version 5.3.0 to 5.3.1 on OpenShift 4.17.
-
-### Upgrade Path
-
-**Direct Upgrade**: 5.3.0 → 5.3.1
-
-### Services to Upgrade
-
-The following 8 services will be upgraded:
-
-- **Cloud Pak for Data Platform**
-- **Db2 OLTP**
-- **Watson Speech**
-- **Voice Gateway**
-- **Watsonx Orchestrate**
-- **Watsonx Ai**
-- **Cognos Analytics**
-- **Watsonx Governance**
-
-### Key Requirements
-
-- **CPD CLI Version**: 14.3.1.2
-- **Helm Version**: 3.16.3
-- **Storage**: Netapp
-  - Block Storage Class: csi-gce-pd-ssd
-  - File Storage Class: gcnv-standard-k8s
-
 
 ## Upgrade Path Validation
 
@@ -103,9 +50,9 @@ All validation checks passed. The upgrade path is valid and can proceed.
 
 ---
 
-## 2. Prerequisites
+## 1. Prerequisites
 
-### 2.1 Required Tools
+### 1.1 Required Tools
 
 Ensure the following tools are installed and configured:
 
@@ -147,14 +94,14 @@ cpd-cli version
 - **GitHub Release**: [v14.3.1.2](https://github.com/IBM/cpd-cli/releases/tag/v14.3.1.2)
 - **Download URL**: https://github.com/IBM/cpd-cli/releases/download/v14.3.1.2/cpd-cli-linux-EE-14.3.1.2.tgz
 
-### 2.2 Access Requirements
+### 1.2 Access Requirements
 
 - [ ] OpenShift cluster admin access
 - [ ] IBM Entitlement Key with appropriate permissions
 - [ ] Access to IBM Container Registry (cp.icr.io)
 - [ ] Access to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
-### 2.3 Environment Variables Setup (cpd_vars.sh)
+### 1.3 Environment Variables Setup (cpd_vars.sh)
 
 Ensure that your environment variables script includes the correct information for the instance of IBM Software Hub that you want to upgrade.
 
@@ -166,7 +113,7 @@ Ensure that your environment variables script includes the correct information f
 - Operands Namespace: `cpd-instance`
 - Block Storage Class: `csi-gce-pd-ssd`
 - File Storage Class: `gcnv-standard-k8s`
-- Components: `cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance`
+- Components: `cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance`
 - Private Registry: `UPDATE_WITH_PRIVATE_REGISTRY_URL`
 
 **Documentation**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cri-updating-your-environment-variables-script-1)
@@ -211,7 +158,7 @@ cpd-cli manage restart-container
 podman ps | grep olm-utils
 ```
 
-### 2.7 Air-Gapped Environment Prerequisites
+### 1.7 Air-Gapped Environment Prerequisites
 
 
 **⚠️ IMPORTANT**: This cluster uses a private container registry in an air-gapped environment. The following prerequisites must be completed before proceeding with the upgrade.
@@ -269,18 +216,18 @@ Verify the following before proceeding:
 
 
 
-### 2.7 Advanced Service Prerequisites
+### 1.7 Advanced Service Prerequisites
 
 Some services require additional prerequisite software that may need to be upgraded depending on your upgrade path and cluster configuration. Review the following documentation to determine if any actions are required for your environment:
 
-#### 2.7.1 Upgrading Prerequisite Software
+#### 1.7.1 Upgrading Prerequisite Software
 
 **Documentation**: [Upgrading prerequisite software](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-upgrading-prerequisite-software-1)
 
 This section covers general prerequisite software upgrades that may be required before upgrading IBM Software Hub.
 
 
-#### 2.7.2 Multicloud Object Gateway (MCG)
+#### 1.7.2 Multicloud Object Gateway (MCG)
 
 **Required for**: Watson Speech, Voice Gateway, Watsonx Ai
 
@@ -290,7 +237,7 @@ This section covers general prerequisite software upgrades that may be required 
 
 
 
-#### 2.7.3 Upgrading Red Hat OpenShift Serverless Knative Eventing
+#### 1.7.3 Upgrading Red Hat OpenShift Serverless Knative Eventing
 
 **Required for**: Watsonx Orchestrate
 
@@ -307,13 +254,13 @@ oc get csv -n openshift-serverless | grep serverless-operator
 Compare with requirements in [Platform Agnostic Operators](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=requirements-platform-agnostic-operators).
 
 
-#### 2.7.4 Upgrading Operators for Services that Require GPUs
+#### 1.7.4 Upgrading Operators for Services that Require GPUs
 
 **Documentation**: [Upgrading operators for services that require GPUs](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-operators-services-that-require-gpus-1)
 
 If your environment includes services that require GPU support, you may need to upgrade related operators before upgrading IBM Software Hub.
 
-#### 2.7.5 Upgrading Red Hat OpenShift AI
+#### 1.7.5 Upgrading Red Hat OpenShift AI
 
 **Documentation**: [Upgrading Red Hat OpenShift AI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-ai-1)
 
@@ -322,7 +269,7 @@ If your environment uses Red Hat OpenShift AI, review this documentation to dete
 
 ---
 
-## 3. Pre-Upgrade Backups
+## 2. Pre-Upgrade Backups
 
 ## Pre-Upgrade Backups
 
@@ -460,7 +407,7 @@ Before proceeding with the upgrade, verify all backups are complete:
 ---
 
 
-## 4. Pre-Upgrade Health Check
+## 3. Pre-Upgrade Health Check
 
 ### 3.1 Run Comprehensive Health Check
 
@@ -751,36 +698,7 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 - Test telephony connections
 - Verify call routing rules
 
-#### 4.3.5 Upgrade Watsonx Orchestrate
-
-```bash
-# Upgrade watsonx_orchestrate (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_orchestrate \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_orchestrate upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_orchestrate
-
-# Check watsonx_orchestrate pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
-```
-
-**Special Requirements for Watsonx Orchestrate:**
-- Backup automation workflows
-- Export skill configurations
-- Verify integration endpoints
-
-#### 4.3.6 Upgrade Watsonx Ai
+#### 4.3.5 Upgrade Watsonx Ai
 
 ```bash
 # Upgrade watsonx_ai (5.3.x method)
@@ -809,6 +727,35 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
 - Backup foundation model configurations
 - Verify model deployment endpoints
 - Check prompt template library
+
+#### 4.3.6 Upgrade Watsonx Orchestrate
+
+```bash
+# Upgrade watsonx_orchestrate (5.3.x method)
+cpd-cli manage install-components \
+  --license_acceptance=true \
+  --components=watsonx_orchestrate \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
+  --image_pull_secret=${IMAGE_PULL_SECRET} \
+  --run_storage_tests=false \
+  --upgrade=true
+
+# Monitor watsonx_orchestrate upgrade
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_orchestrate
+
+# Check watsonx_orchestrate pods
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
+```
+
+**Special Requirements for Watsonx Orchestrate:**
+- Backup automation workflows
+- Export skill configurations
+- Verify integration endpoints
 
 #### 4.3.7 Upgrade Cognos Analytics
 
