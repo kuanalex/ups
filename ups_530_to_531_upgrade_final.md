@@ -198,30 +198,6 @@ Some services require additional prerequisite software upgrades. Review [IBM Doc
 
 ## Pre-Upgrade Backups
 
-⚠️ **CRITICAL**: Complete all backups before proceeding with upgrade. Store backups securely outside the cluster.
-
-### CPD Health Check and Backup
-
-The `cpd-cli health` command creates comprehensive backups including CRs, ConfigMaps, and cluster state.
-
-```bash
-# Run comprehensive health check with backup
-cpd-cli health runcommand \
-  --commands=cluster,nodes,operands,operators \
-  --control_plane_ns="${PROJECT_CPD_INST_OPERANDS}" \
-  --operator_ns="${PROJECT_CPD_INST_OPERATORS}" \
-  --log-level=debug \
-  --verbose \
-  --save
-
-# The health check creates a timestamped directory with:
-# - Custom Resources (CRs)
-# - ConfigMaps
-# - Cluster state
-# - Node information
-# - Operator status
-```
-
 ### Additional Required Backups
 
 #### Routes Backup
@@ -233,8 +209,6 @@ oc get routes -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > routes_backup_$(date +%Y
 ```bash
 oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
-
-⚠️ **DO NOT PROCEED** until backups are complete and stored securely outside the cluster.
 ---
 
 
@@ -360,7 +334,7 @@ oc get pods -n ${PROJECT_SCHEDULING_SERVICE}
 
 ---
 
-### 4.2 Upgrade Cloud Pak for Data Platform
+### 4.2 Upgrade IBM Software Hub Platform
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
 
@@ -593,14 +567,14 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_governance
 
 ## Service Instance Upgrades
 
-**⚠️ IMPORTANT**: Some services require separate instance upgrades after the CR upgrade completes. Service instances are NOT automatically upgraded when you upgrade the service CR.
+Some services require separate instance upgrades after the CR upgrade completes. Service instances are NOT automatically upgraded when you upgrade the service CR.
 
 ### Prerequisites
 
 Before upgrading service instances, ensure you have:
-1. ✅ Completed all CR upgrades successfully
-2. ✅ Created a CPD profile with appropriate permissions
-3. ✅ Set the `CPD_PROFILE_NAME` environment variable
+1. Completed all CR upgrades successfully
+2. Created a CPD profile with appropriate permissions
+3. Set the `CPD_PROFILE_NAME` environment variable
 
 **CPD Profile Requirements**:
 - User must have `can_provision` (Create service instances) permission
@@ -645,36 +619,18 @@ cpd-cli service-instance upgrade \
 
 **Documentation**: [Upgrading Db2](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-db2)
 
-**⚠️ Important**: Instance must be in running state before upgrade
+**Note**: Instance must be in running state before upgrade
 
 
 ---
 
-#### 2. Watson Speech
-
-**Service Type**: `speech`
-
-**⚠️ Note**: The service instances are automatically upgraded when you upgrade Watson Speech services. No manual instance upgrade is required.
-
-**Documentation**: [Upgrading Watson Speech Services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-from-version-53-8)
-
-
----
-
-
-### Notes
-
-- **Automatic Upgrades**: If you have Db2 Data Management Console (dmc), its instances upgrade automatically - no manual action needed
-- **Upgrade Order**: Upgrade service instances after all CR upgrades are complete
-- **Validation**: Always validate instance upgrades by listing instances and checking their versions
-- **Troubleshooting**: If an instance upgrade fails, check the instance logs and status before retrying
 
 
 ---
 
 ## Upgrade cpdbr Service
 
-**⚠️ IMPORTANT**: You must upgrade the cpdbr service after you upgrade IBM® Software Hub.
+You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
 **Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-updating-cpdbr-service-1)
 
@@ -758,7 +714,7 @@ cpd-cli service-instance list --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 
 ---
 
-### 5.3 Post-Upgrade Migrations
+### Post-Upgrade Migrations
 
 
 ---
