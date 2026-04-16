@@ -8,7 +8,7 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 ```
 
 **To:**
@@ -19,7 +19,7 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
 ```
 
 ---
@@ -69,45 +69,20 @@ Reference: [Mirroring images to private image registry](https://www.ibm.com/docs
 
 ### Required Tools
 
-Ensure the following tools are installed and configured:
+Ensure the following tools are installed and updated to the required versions:
 
-```bash
-# Verify OpenShift CLI
-oc version
+- **IBM Software Hub CLI**: Version 14.3.1.2
+- **OpenShift CLI (oc)**: Compatible version for your cluster
+- **Helm CLI**: Version 3.16.3
+- **Additional utilities**: jq, podman
 
-# Verify CPD CLI version 14.3.1.2
-cpd-cli version
+**Installation and Update Instructions:**
 
-# Verify Helm version 3.16.3
-helm version
-
-# Verify jq for JSON processing
-jq --version
-
-# Verify podman for OLM utils container
-podman version
-```
-
-**Install/Update CPD CLI 14.3.1.2:**
-
-```bash
-# Download and extract cpd-cli 14.3.1.2
-wget https://github.com/IBM/cpd-cli/releases/download/v14.3.1.2/cpd-cli-linux-EE-14.3.1.2.tgz && \
-gzip -d cpd-cli-linux-EE-14.3.1.2.tgz && \
-tar -xvf cpd-cli-linux-EE-14.3.1.2.tar && \
-rm -rf cpd-cli-linux-EE-14.3.1.2.tar
-
-# Verify installation (directory name includes build number)
-cd cpd-cli-linux-EE-*/ && ./cpd-cli version && cd ..
-
-# Add to PATH
-export PATH=$PWD/cpd-cli-linux-EE-*:$PATH
-cpd-cli version
-```
-
-**Release Information:**
-- **GitHub Release**: [v14.3.1.2](https://github.com/IBM/cpd-cli/releases/tag/v14.3.1.2)
-- **Download URL**: https://github.com/IBM/cpd-cli/releases/download/v14.3.1.2/cpd-cli-linux-EE-14.3.1.2.tgz
+For detailed instructions on installing or updating these tools, refer to:
+- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=53-updating-client-workstations)
+  - [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-updating-software-hub-cli-1)
+  - [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-updating-openshift-cli-1)
+  - [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-installing-helm-cli-1)
 
 ### Access Requirements
 
@@ -465,31 +440,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 ```
 
-#### 4.3.5 Upgrade Watsonx Orchestrate
-
-```bash
-# Upgrade watsonx_orchestrate (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_orchestrate \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_orchestrate upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_orchestrate
-
-# Check watsonx_orchestrate pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
-```
-
-#### 4.3.6 Upgrade Watsonx Ai
+#### 4.3.5 Upgrade Watsonx Ai
 
 ```bash
 # Upgrade watsonx_ai (5.3.x method)
@@ -511,6 +462,30 @@ cpd-cli manage get-cr-status \
 
 # Check watsonx_ai pods
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
+```
+
+#### 4.3.6 Upgrade Watsonx Orchestrate
+
+```bash
+# Upgrade watsonx_orchestrate (5.3.x method)
+cpd-cli manage install-components \
+  --license_acceptance=true \
+  --components=watsonx_orchestrate \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
+  --image_pull_secret=${IMAGE_PULL_SECRET} \
+  --run_storage_tests=false \
+  --upgrade=true
+
+# Monitor watsonx_orchestrate upgrade
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_orchestrate
+
+# Check watsonx_orchestrate pods
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
 ```
 
 #### 4.3.7 Upgrade Cognos Analytics
