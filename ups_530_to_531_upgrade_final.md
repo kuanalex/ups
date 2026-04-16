@@ -542,25 +542,21 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_governance
 
 ## Service Instance Upgrades
 
-Some services require separate instance upgrades after the CR upgrade completes. Service instances are NOT automatically upgraded when you upgrade the service CR.
+After upgrading service CRs, some services require additional instance upgrades. The following services in your configuration need manual instance upgrades:
 
 ### Prerequisites
 
-Before upgrading service instances, ensure you have:
-1. Completed all CR upgrades successfully
-2. Created a CPD profile with appropriate permissions
+1. Complete all CR upgrades successfully
+2. Create a CPD profile with these permissions:
+   - `can_provision` (Create service instances)
+   - `manage_service_instances` (Manage service instances)
 3. Set the `CPD_PROFILE_NAME` environment variable
 
-**CPD Profile Requirements**:
-- User must have `can_provision` (Create service instances) permission
-- User must have `manage_service_instances` (Manage service instances) permission
-- Documentation: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cli-creating-cpd-profile)
+**Documentation**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cli-creating-cpd-profile)
 
 ---
 
-### Services Requiring Instance Upgrades
-
-The following services in your configuration require manual instance upgrades:
+### Services Requiring Manual Instance Upgrades
 
 #### 1. Db2 OLTP
 
