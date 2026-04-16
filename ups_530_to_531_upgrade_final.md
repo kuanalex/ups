@@ -8,7 +8,7 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
 **To:**
@@ -19,12 +19,12 @@ OCP: 4.17
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_ai,watsonx_orchestrate,cognos_analytics,watsonx_governance
+Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
 ```
 
 ---
 
-## Pre-requisites
+## Prerequisites
 
 #### 1. Backup of the cluster is done
 
@@ -55,17 +55,17 @@ Reference: [Mirroring images to private image registry](https://www.ibm.com/docs
 
 ## Table of Contents
 
-1. [Pre-Upgrade Steps](#pre-upgrade-steps)
-2. [Pre-Upgrade Backups](#pre-upgrade-backups)
+1. [Pre Upgrade Steps](#pre-upgrade-steps)
+2. [Pre Upgrade Backups](#pre-upgrade-backups)
 3. [Upgrade Execution](#upgrade-execution)
 4. [Service Instance Upgrades](#service-instance-upgrades)
 5. [Upgrade cpdbr Service](#upgrade-cpdbr-service)
 6. [RSI Patch Management](#rsi-patch-management)
-7. [Post-Upgrade Validation](#post-upgrade-validation)
+7. [Post Upgrade Validation](#post-upgrade-validation)
 
 ---
 
-## Pre-Upgrade Steps
+## Pre Upgrade Steps
 
 ### Required Tools
 
@@ -137,10 +137,10 @@ cpd-cli manage restart-container
 podman ps | grep olm-utils
 ```
 
-### Air-Gapped Environment Prerequisites
+### Air Gapped Environment Prerequisites
 
 
-**⚠️ IMPORTANT**: Air-gapped environment detected. Complete these steps before upgrading.
+**⚠️ IMPORTANT**: Air gapped environment detected. Complete these steps before upgrading.
 
 **Private Registry**: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
@@ -172,7 +172,7 @@ Some services require additional prerequisite software upgrades. Review [IBM Doc
 
 ---
 
-## Pre-Upgrade Backups
+## Pre Upgrade Backups
 
 ### Additional Required Backups
 
@@ -188,7 +188,7 @@ oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_b
 ---
 
 
-## Pre-Upgrade Health Check
+## Pre Upgrade Health Check
 
 ### Run Comprehensive Health Check
 
@@ -441,31 +441,7 @@ cpd-cli manage get-cr-status \
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 ```
 
-#### 4.3.5 Upgrade Watsonx Ai
-
-```bash
-# Upgrade watsonx_ai (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_ai \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_ai upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_ai
-
-# Check watsonx_ai pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
-```
-
-#### 4.3.6 Upgrade Watsonx Orchestrate
+#### 4.3.5 Upgrade Watsonx Orchestrate
 
 ```bash
 # Upgrade watsonx_orchestrate (5.3.x method)
@@ -487,6 +463,30 @@ cpd-cli manage get-cr-status \
 
 # Check watsonx_orchestrate pods
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
+```
+
+#### 4.3.6 Upgrade Watsonx Ai
+
+```bash
+# Upgrade watsonx_ai (5.3.x method)
+cpd-cli manage install-components \
+  --license_acceptance=true \
+  --components=watsonx_ai \
+  --release=${VERSION} \
+  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
+  --image_pull_secret=${IMAGE_PULL_SECRET} \
+  --run_storage_tests=false \
+  --upgrade=true
+
+# Monitor watsonx_ai upgrade
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_ai
+
+# Check watsonx_ai pods
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
 ```
 
 #### 4.3.7 Upgrade Cognos Analytics
@@ -666,9 +666,9 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ---
 ---
 
-## Post-Upgrade Validation
+## Post Upgrade Validation
 
-### Post-Upgrade Validation
+### Post Upgrade Validation
 
 ```bash
 # Check CR status
@@ -686,7 +686,7 @@ cpd-cli service-instance list --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 
 ---
 
-### Post-Upgrade Migrations
+### Post Upgrade Migrations
 
 
 ---
