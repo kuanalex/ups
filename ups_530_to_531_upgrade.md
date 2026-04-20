@@ -322,7 +322,65 @@ mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_CPD_INST_OPERATORS}-cluste
 cd -
 ```
 
-#### 4.1.3 Apply Entitlements
+#### 4.1.3 Creating image pull secrets for shared cluster components
+
+**Reference**: [Creating image pull secrets for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-creating-image-pull-secrets-shared-cluster-components)
+
+Log in to Red Hat® OpenShift® Container Platform as a user with sufficient permissions to complete the task
+```bash
+${OC_LOGIN}
+```
+
+Create a file named dockerconfig.json based on where your cluster pulls images from
+```bash
+cat <<EOF > dockerconfig.json 
+{
+  "auths": {
+    "${PRIVATE_REGISTRY_LOCATION}": {
+      "auth": "${IMAGE_PULL_CREDENTIALS}"
+    }
+  }
+}
+EOF
+```
+
+#### 4.1.4 Creating image pull secrets for the instance  
+
+**Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-creating-image-pull-secrets-instance)
+
+Log in to Red Hat® OpenShift® Container Platform as a user with sufficient permissions to complete the task
+```bash
+${OC_LOGIN}
+```
+
+Create a file named dockerconfig.json based on where your cluster pulls images from
+```bash
+cat <<EOF > dockerconfig.json 
+{
+  "auths": {
+    "${PRIVATE_REGISTRY_LOCATION}": {
+      "auth": "${IMAGE_PULL_CREDENTIALS}"
+    }
+  }
+}
+EOF
+```
+
+Create the image pull secret in the operators project for the instance
+```bash
+oc create secret docker-registry ${IMAGE_PULL_SECRET} \
+--from-file ".dockerconfigjson=dockerconfig.json" \
+--namespace=${PROJECT_CPD_INST_OPERATORS}
+```
+
+Create the image pull secret in the operands project for the instance
+```bash
+oc create secret docker-registry ${IMAGE_PULL_SECRET} \
+--from-file ".dockerconfigjson=dockerconfig.json" \
+--namespace=${PROJECT_CPD_INST_OPERATORS}
+```
+
+#### 4.1.5 Apply Entitlements
 
 **Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
 
@@ -441,62 +499,183 @@ oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.
 
 ### 4.4 Upgrade Services
 
-**Option 1: Batch Upgrade (Recommended for Most Cases)**
+**Individual Service Upgrade (For More Control)**
 
-Upgrade all services together for faster completion:
+#### 4.4.1 Upgrade Watsonx Orchestrate
 
+If you plan to upgrade the previous versions of watsonx™ Orchestrate with custom upgrade options, specify the appropriate options in a file named install-options.yml in the cpd-cli work directory
 ```bash
-# Upgrade all services in batch (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=${COMPONENTS} \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor overall upgrade progress
-watch -n 30 'oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep -v Running | grep -v Completed'
-
-# Check upgrade status
-cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+# ............................................................................
+# watsonx Orchestrate parameters
+# ............................................................................
+non_olm:
+  watsonxOrchestrate:
+    installMode: "agentic_assistant"  
+    watsonxAI:
+      watsonxaiifm: true
 ```
 
-**Option 2: Individual Service Upgrade (For More Control)**
-
-Upgrade services one at a time for better monitoring and troubleshooting:
-
-#### 4.4.2 Upgrade Db2 OLTP
-
+# Upgrade watsonx_orchestrate
 ```bash
-# Upgrade db2oltp (5.3.x method)
 cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=db2oltp \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
+--license_acceptance=true \
+--components=watsonx_orchestrate \
+--release=${VERSION} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--param-file=/tmp/work/install-options.yml \
+--upgrade=true
+```
 
-# Monitor db2oltp upgrade
+Monitor watsonx_orchestrate upgrade
+```bash
 cpd-cli manage get-cr-status \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=db2oltp
-
-# Check db2oltp pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep db2oltp
+  --components=watsonx_orchestrate
 ```
 
-#### 4.4.3 Upgrade Watson Speech
+#### 4.4.2 Upgrade Watsonx Ai
 
+Upgrade watsonx_ai
 ```bash
-# Upgrade watson_speech (5.3.x method)
+cpd-cli manage install-components \
+--license_acceptance=true \
+--components=${XAI_COMPONENT_TYPE} \
+--release=${VERSION} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--upgrade=true
+```
+
+Monitor watsonx_ai upgrade
+```bash
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_ai
+```
+
+Post upgrade tasks for Watsonx Orchestrate
+
+Login to Red Hat OpenShift cluster
+```bash
+$OC_LOGIN
+```
+
+Extract the current ATM server configuration from the Kubernetes secret
+```bash
+kubectl get secret wo-agentic-task-manager-server-env \
+  -n cpd-instance-1 \
+-o jsonpath='{.data.\.secret\.env}' | base64 --decode | grep SERVER_INTERNAL
+```
+
+Important: Store the value of SERVER_INTERNAL_HOSTNAME for later use, ensure that the value for SERVER_INTERNAL_PROTOCOL is set to https and SERVER_INTERNAL_PORT is set to 9045
+```bash
+SERVER_INTERNAL_PROTOCOL=https
+SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance-1.svc.cluster.local
+SERVER_INTERNAL_PORT=9045
+```
+
+Download and edit the [migration script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-from-version-53-20#cli-upgrade__migration-script__title__1)
+```bash
+# Edit the configuration section (lines 6-7)
+vi /tmp/atm_endpoint_tls_migration.sql
+```
+
+Update the configuration values to match your environment by using the following commands
+```bash
+SET atm_migration.old_url = 'http://<SERVER_INTERNAL_HOSTNAME>:9044';
+SET atm_migration.new_url = 'https://<SERVER_INTERNAL_HOSTNAME>:9045';
+```
+
+Example configuration:
+```
+SET atm_migration.old_url = 'http://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9044';
+SET atm_migration.new_url = 'https://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9045';
+```
+
+To run the migration script on PostgreSQL database
+```bash
+POD_NAME=$(oc get pods -l "k8s.enterprisedb.io/instanceName=wo-watson-orchestrate-postgresedb-1" -o jsonpath='{.items[0].metadata.name}')
+DATABASE_NAME="archer"
+
+oc exec -i $POD_NAME -- psql -U postgres -d $DATABASE_NAME < /tmp/atm_endpoint_tls_migration.sql
+```
+
+Run the following verification queries to validate the migration status
+```bash
+oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
+SELECT COUNT(*) as remaining_tools FROM tools 
+WHERE binding::text LIKE '%wo-agentic-task-manager%' 
+AND binding::text LIKE '%:9044%'; 
+SELECT COUNT(*) as remaining_tool_versions FROM tool_version 
+WHERE binding::text LIKE '%wo-agentic-task-manager%' 
+AND binding::text LIKE '%:9044%';"
+```
+
+Expected results
+```bash
+- `remaining_tools`: 0
+- `remaining_tool_versions`: 0
+```
+
+To clean up the migration log, run the following commands
+```bash
+oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
+-- Verify migration log entry
+SELECT * FROM migration_log
+WHERE migration_name = 'atm_endpoint_tls_migration_5_3_1';
+"
+```
+
+Drop the migration_log table only after successful verification.
+```bash
+oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
+-- Drop the migration_log table 
+DROP TABLE IF EXISTS migration_log;
+"
+```
+
+Removing Redis CronJob - This section is applicable only if you upgrade to Version 5.3.1 Patch 2
+
+After you upgrade to Version 5.3.1 Patch 2, you must remove the Redis Cronjob as Licensing Redis Cronjob is no longer supported
+
+Run the following command to delete the Redis Cronjob:
+```bash
+oc delete cronjob wo-watson-orchestrate-redis-cronjob --ignore-not-found
+```
+
+
+#### 4.4.3 Upgrade Watsonx Governance
+
+Upgrade watsonx_governance
+```bash
+cpd-cli manage install-components \
+--license_acceptance=true \
+--components=watsonx_governance \
+--release=${VERSION} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--param-file=/tmp/work/install-options.yml \
+--upgrade=true
+```
+
+Monitor watsonx_governance upgrade
+```bash
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_governance
+```
+
+#### 4.4.4 Upgrade Watson Speech
+
+Upgrade watson_speech
+```bash
 cpd-cli manage install-components \
   --license_acceptance=true \
   --components=watson_speech \
@@ -507,17 +686,16 @@ cpd-cli manage install-components \
   --image_pull_secret=${IMAGE_PULL_SECRET} \
   --run_storage_tests=false \
   --upgrade=true
+```
 
-# Monitor watson_speech upgrade
+Monitor watson_speech upgrade
+```bash
 cpd-cli manage get-cr-status \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --components=watson_speech
-
-# Check watson_speech pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watson_speech
 ```
 
-#### 4.4.4 Upgrade Voice Gateway
+#### 4.4.5 Upgrade Voice Gateway
 
 ```bash
 # Upgrade voice_gateway (5.3.x method)
@@ -531,23 +709,22 @@ cpd-cli manage install-components \
   --image_pull_secret=${IMAGE_PULL_SECRET} \
   --run_storage_tests=false \
   --upgrade=true
+```
 
-# Monitor voice_gateway upgrade
+Monitor voice_gateway upgrade
+```bash
 cpd-cli manage get-cr-status \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --components=voice_gateway
-
-# Check voice_gateway pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep voice_gateway
 ```
 
-#### 4.4.5 Upgrade Watsonx Orchestrate
+#### 4.4.6 Upgrade Db2 OLTP
 
+Upgrade db2oltp
 ```bash
-# Upgrade watsonx_orchestrate (5.3.x method)
 cpd-cli manage install-components \
   --license_acceptance=true \
-  --components=watsonx_orchestrate \
+  --components=db2oltp \
   --release=${VERSION} \
   --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
   --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
@@ -555,44 +732,19 @@ cpd-cli manage install-components \
   --image_pull_secret=${IMAGE_PULL_SECRET} \
   --run_storage_tests=false \
   --upgrade=true
-
-# Monitor watsonx_orchestrate upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_orchestrate
-
-# Check watsonx_orchestrate pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_orchestrate
 ```
 
-#### 4.4.6 Upgrade Watsonx Ai
-
+Monitor db2oltp upgrade
 ```bash
-# Upgrade watsonx_ai (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_ai \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_ai upgrade
 cpd-cli manage get-cr-status \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_ai
-
-# Check watsonx_ai pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_ai
+  --components=db2oltp
 ```
 
 #### 4.4.7 Upgrade Cognos Analytics
 
+Upgrade cognos_analytics
 ```bash
-# Upgrade cognos_analytics (5.3.x method)
 cpd-cli manage install-components \
   --license_acceptance=true \
   --components=cognos_analytics \
@@ -603,48 +755,21 @@ cpd-cli manage install-components \
   --image_pull_secret=${IMAGE_PULL_SECRET} \
   --run_storage_tests=false \
   --upgrade=true
+```
 
-# Monitor cognos_analytics upgrade
+Monitor cognos_analytics upgrade
+```bash
 cpd-cli manage get-cr-status \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --components=cognos_analytics
-
-# Check cognos_analytics pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep cognos_analytics
 ```
-
-#### 4.4.8 Upgrade Watsonx Governance
-
-```bash
-# Upgrade watsonx_governance (5.3.x method)
-cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watsonx_governance \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
-
-# Monitor watsonx_governance upgrade
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_governance
-
-# Check watsonx_governance pods
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep watsonx_governance
-```
-
 
 ---
 
 
-
 ## Service Instance Upgrades
 
-After upgrading service CRs, some services require additional instance upgrades. The following services in your configuration need manual instance upgrades:
+After upgrading service CRs, some services require additional instance upgrades
 
 ### Prerequisites
 
@@ -658,31 +783,28 @@ After upgrading service CRs, some services require additional instance upgrades.
 
 ---
 
-### Services Requiring Manual Instance Upgrades
+### Upgrading Service Instances
 
-#### 1. Db2 OLTP
-
-**Service Type**: `db2oltp`
-
-**Step 1**: List all Db2 instances:
+List all service instances using the following command
 ```bash
-cpd-cli service-instance list \
---service-type=db2oltp \
---profile=${CPD_PROFILE_NAME}
+cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
 
-**Step 2**: Check instance status:
-```bash
-# Set instance name
-export INSTANCE_NAME="<instance-name>"
+#### Upgrade Db2oltp service instances
 
-# Check if instance is running
+Export the instance name
+```bash
+export INSTANCE_NAME=<instance-name>
+```
+
+Run the following command to check whether your Db2 service instances is in running state:
+```bash
 cpd-cli service-instance status ${INSTANCE_NAME} \
 --profile=${CPD_PROFILE_NAME} \
 --service-type=db2oltp
 ```
 
-**Step 3**: Upgrade each instance individually:
+Upgrade the service instance
 ```bash
 cpd-cli service-instance upgrade \
 --service-type=db2oltp \
@@ -690,15 +812,53 @@ cpd-cli service-instance upgrade \
 --profile=${CPD_PROFILE_NAME}
 ```
 
-**Documentation**: [Upgrading Db2](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-db2)
+#### Upgrade Cognos Analytics service instances
 
-**Note**: Instance must be in running state before upgrade
+Set the INSTANCE_VERSION environment variable to the version that corresponds to the version of IBM Software Hub on your cluster
+```bash
+export INSTANCE_VERSION=	29.1.0
+```
 
+Upgrade the service instances
+```bash
+cpd-cli service-instance upgrade \
+--service-type=cognos-analytics-app \
+--profile=${CPD_PROFILE_NAME} \
+--version=${INSTANCE_VERSION} \
+--all
+```
 
----
+#### Upgrade Openpages service instances
 
+Get the list of OpenPages service instances
+```bash
+cpd-cli service-instance list \
+--service-type=openpages \
+--profile=${CPD_PROFILE_NAME}
+```
 
+Set the INSTANCE_NAME environment variable to the name of the service instance that you want to upgrade
+```bash
+export INSTANCE_NAME=<instance-name>
+```
 
+Run the following command to check whether your OpenPages service instances is in running state
+```bash
+cpd-cli service-instance status ${INSTANCE_NAME} \ 
+--profile=${CPD_PROFILE_NAME} \ 
+--service-type=openpages
+```
+
+Upgrade the service instance
+```bash
+cpd-cli service-instance upgrade \
+--service-type=openpages \
+--instance-name=${INSTANCE_NAME} \
+--force-version-upgrade=true \
+--profile=${CPD_PROFILE_NAME}
+```
+
+Repeat the preceding steps to upgrade each service instance associated with this instance of IBM Software Hub
 
 ---
 
