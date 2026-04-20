@@ -495,6 +495,44 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep -E "zen|usermgmt|ibm-nginx"
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
 ```
 
+## RSI Patch Management
+
+If you have any custom RSI patches that patch zen pods or IBM Cloud Pak foundational services pods, reapply the patches after the upgrade.
+
+### Step 1: List Existing RSI Patches
+
+Run the following command to get a list of the RSI patches in the operands project:
+
+```bash
+cpd-cli manage get-rsi-patch-info \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --all
+```
+
+**Expected Output**: List of all RSI patches with their status and configuration.
+
+### Step 2: Reapply Custom Patches
+
+If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
+
+```bash
+cpd-cli manage apply-rsi-patches \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+```
+
+**Verification**:
+```bash
+# Verify patches are active
+cpd-cli manage get-rsi-patch-info \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --all
+
+# Check that affected pods are running
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
+
 ---
 
 ### 4.4 Upgrade Services
@@ -504,6 +542,13 @@ oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.
 #### 4.4.1 Upgrade Watsonx Orchestrate
 
 If you plan to upgrade the previous versions of watsonx™ Orchestrate with custom upgrade options, specify the appropriate options in a file named install-options.yml in the cpd-cli work directory
+
+You can identify the location of the work folder using below command in the cpd-cli work directory
+```bash
+podman inspect olm-utils-play-v4 | jq -r '.[0].Mounts' |jq -r '.[] | select(.Destination == "/tmp/work") | .Source'
+```
+
+Create the install-options.yml file in the 
 ```bash
 # ............................................................................
 # watsonx Orchestrate parameters
@@ -515,7 +560,7 @@ non_olm:
       watsonxaiifm: true
 ```
 
-# Upgrade watsonx_orchestrate
+#### Upgrade watsonx_orchestrate
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -534,28 +579,6 @@ Monitor watsonx_orchestrate upgrade
 cpd-cli manage get-cr-status \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --components=watsonx_orchestrate
-```
-
-#### 4.4.2 Upgrade Watsonx Ai
-
-Upgrade watsonx_ai
-```bash
-cpd-cli manage install-components \
---license_acceptance=true \
---components=${XAI_COMPONENT_TYPE} \
---release=${VERSION} \
---operator_ns=${PROJECT_CPD_INST_OPERATORS} \
---instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---image_pull_prefix=${IMAGE_PULL_PREFIX} \
---image_pull_secret=${IMAGE_PULL_SECRET} \
---upgrade=true
-```
-
-Monitor watsonx_ai upgrade
-```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_ai
 ```
 
 Post upgrade tasks for Watsonx Orchestrate
@@ -648,6 +671,27 @@ Run the following command to delete the Redis Cronjob:
 oc delete cronjob wo-watson-orchestrate-redis-cronjob --ignore-not-found
 ```
 
+#### 4.4.2 Upgrade Watsonx Ai
+
+Upgrade watsonx_ai
+```bash
+cpd-cli manage install-components \
+--license_acceptance=true \
+--components=${XAI_COMPONENT_TYPE} \
+--release=${VERSION} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--upgrade=true
+```
+
+Monitor watsonx_ai upgrade
+```bash
+cpd-cli manage get-cr-status \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --components=watsonx_ai
+```
 
 #### 4.4.3 Upgrade Watsonx Governance
 
@@ -673,6 +717,99 @@ cpd-cli manage get-cr-status \
 ```
 
 #### 4.4.4 Upgrade Watson Speech
+
+Before upgrading Watson Speech, confirm/update the following configurations
+
+Increase resources for Multi cloud object gateway (Note: This was performed on Prod in the previous 5.3.0 upgrade)
+```bash
+oc patch -n openshift-storage storageclusters.ocs.openshift.io ocs-storagecluster --type merge --patch '{"spec": {"resources": {"noobaa-agent": {"limits": {"memory": "8Gi"},"requests": {"memory": "8Gi"}},"noobaa-core": {"limits": {"memory":"8Gi"},"requests": {"memory": "8Gi"}},"noobaa-db": {"limits": {"memory": "8Gi"},"requests": {"memory": "8Gi"}},"noobaa-endpoint": {"limits": {"memory": "8Gi"},"requests": {"memory": "8Gi"}}}}}'
+
+oc patch -n openshift-storage backingstore noobaa-default-backing-store --type=merge --patch='{"spec":{"pvPool":{"numVolumes": 1, "resources":{"limits":{"memory": "8Gi"}}}}}'
+```
+
+For StorageCluster ocs-storagecluster, add cpu: "3" for all resources as both requests and limits, add maxCount 8 and minCount 1 as multiCloudGateway.endpoints
+```bash
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+......
+spec:
+  ........
+  multiCloudGateway:
+    dbStorageClassName: ssd-csi
+    disableLoadBalancerService: true
+    endpoints:
+      maxCount: 8
+      minCount: 1
+    reconcileStrategy: standalone
+  resourceProfile: balanced
+  resources:
+    noobaa-agent:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    noobaa-core:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    noobaa-db:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+    noobaa-endpoint:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+```
+
+For BackingStore noobaa-default-backing-store, set numVolumes to 4 and storage to 100Gi
+```bash
+apiVersion: noobaa.io/v1alpha1
+kind: BackingStore
+......
+spec:
+  pvPool:
+    numVolumes: 4
+    resources:
+      limits:
+        memory: 8Gi
+      requests:
+        storage: 100Gi
+    secret: {}
+    storageClass: ssd-csi
+  type: pv-pool
+```
+
+For NooBaa noobaa, add max_connections 2400 for dbConf
+```bash
+apiVersion: noobaa.io/v1alpha1
+kind: NooBaa
+...
+spec:
+  ......
+  coreResources:
+    limits:
+      cpu: "4"
+      memory: 8Gi
+    requests:
+      cpu: "4"
+      memory: 8Gi
+  dbConf: |
+    max_connections 2400
+  dbImage: registry.redhat.io/rhel9/postgresql-15@sha256:4d707fc04f13c271b455f7b56c1fda9e232a62214ffc6213c02e41177dd4a13f
+  dbResources:
+```
 
 Upgrade watson_speech
 ```bash
@@ -785,14 +922,21 @@ After upgrading service CRs, some services require additional instance upgrades
 
 ### Upgrading Service Instances
 
-List all service instances using the following command
+Get a list of all service instances using the following command
 ```bash
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
 
 #### Upgrade Db2oltp service instances
 
-Export the instance name
+Get the list of Db2 service instances
+```bash
+cpd-cli service-instance list \
+--service-type=db2oltp \
+--profile=${CPD_PROFILE_NAME}
+```
+
+Export the db2oltp instance name
 ```bash
 export INSTANCE_NAME=<instance-name>
 ```
@@ -885,47 +1029,6 @@ cpd-cli oadp install \
 
 **Note**: This upgrade should be performed after all services have been upgraded.
 
----
-
-## RSI Patch Management
-
-If you have any custom RSI patches that patch zen pods or IBM Cloud Pak foundational services pods, reapply the patches after the upgrade.
-
-### Step 1: List Existing RSI Patches
-
-Run the following command to get a list of the RSI patches in the operands project:
-
-```bash
-cpd-cli manage get-rsi-patch-info \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --all
-```
-
-**Expected Output**: List of all RSI patches with their status and configuration.
-
-### Step 2: Reapply Custom Patches
-
-If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
-
-```bash
-cpd-cli manage apply-rsi-patches \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
-```
-
-**Verification**:
-```bash
-# Verify patches are active
-cpd-cli manage get-rsi-patch-info \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --all
-
-# Check that affected pods are running
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
-```
-
-**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
-
----
 ---
 
 ## Post Upgrade Validation
