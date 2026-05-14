@@ -455,13 +455,18 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 ```bash
 # Check if scheduler is installed
 oc get scheduling -A
+```
 
+```bash
 # If scheduler exists, upgrade it
 cpd-cli manage apply-scheduler \
-  --release=${VERSION} \
-  --license_acceptance=true \
-  --scheduler_ns=${PROJECT_SCHEDULING_SERVICE}
+--release=${VERSION} \
+--patch_id=0 \
+--license_acceptance=true \
+--scheduler_ns=${PROJECT_SCHEDULING_SERVICE}
+```
 
+```bash
 # Verify scheduler pods are running
 oc get pods -n ${PROJECT_SCHEDULING_SERVICE}
 ```
@@ -473,24 +478,31 @@ oc get pods -n ${PROJECT_SCHEDULING_SERVICE}
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
 
 ```bash
-# Upgrade CPD platform using install-components (5.3.x method)
+# Upgrade CPD platform using install-components (Est. 32 minutes)
 cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=cpd_platform \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
+--license_acceptance=true \
+--components=cpd_platform \
+--release=${VERSION} \
+--patch_id=0 \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--run_storage_tests=false \
+--upgrade=true
+```
 
+```bash
 # Monitor platform upgrade progress (this takes 60-80 minutes)
 watch -n 30 'oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath="{.status.zenStatus}"'
+```
 
+```bash
 # Check platform pods
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep -E "zen|usermgmt|ibm-nginx"
+```
 
+```bash
 # Verify platform version
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
 ```
@@ -504,9 +516,7 @@ If you have any custom RSI patches that patch zen pods or IBM Cloud Pak foundati
 Run the following command to get a list of the RSI patches in the operands project:
 
 ```bash
-cpd-cli manage get-rsi-patch-info \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --all
+cpd-cli manage get-rsi-patch-info --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --all
 ```
 
 **Expected Output**: List of all RSI patches with their status and configuration.
@@ -516,16 +526,12 @@ cpd-cli manage get-rsi-patch-info \
 If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
 
 ```bash
-cpd-cli manage apply-rsi-patches \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+cpd-cli manage apply-rsi-patches --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
 
-**Verification**:
 ```bash
 # Verify patches are active
-cpd-cli manage get-rsi-patch-info \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --all
+cpd-cli manage get-rsi-patch-info --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --all
 
 # Check that affected pods are running
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
@@ -548,14 +554,18 @@ You can identify the location of the work folder using below command in the cpd-
 podman inspect olm-utils-play-v4 | jq -r '.[0].Mounts' |jq -r '.[] | select(.Destination == "/tmp/work") | .Source'
 ```
 
-Create the install-options.yml file in the 
+Create the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace/work directory
 ```bash
 # ............................................................................
 # watsonx Orchestrate parameters
 # ............................................................................
 non_olm:
   watsonxOrchestrate:
-    installMode: "agentic_assistant"  
+    installMode: "agentic_assistant"
+    wxolite:
+      enabled: false
+    uab:
+      enabled: false
     watsonxAI:
       watsonxaiifm: true
 ```
@@ -566,6 +576,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watsonx_orchestrate \
 --release=${VERSION} \
+--patch_id=0 \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -576,9 +587,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_orchestrate upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_orchestrate
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_orchestrate
 ```
 
 Post upgrade tasks for Watsonx Orchestrate
@@ -679,6 +688,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=${XAI_COMPONENT_TYPE} \
 --release=${VERSION} \
+--patch_id=0 \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -688,9 +698,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_ai upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_ai
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_ai
 ```
 
 #### 4.4.3 Upgrade Watsonx Governance
@@ -701,6 +709,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watsonx_governance \
 --release=${VERSION} \
+--patch_id=0 \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -711,9 +720,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_governance upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watsonx_governance
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_governance
 ```
 
 #### 4.4.4 Upgrade Watson Speech
@@ -814,22 +821,21 @@ spec:
 Upgrade watson_speech
 ```bash
 cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=watson_speech \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
+--license_acceptance=true \
+--components=watson_speech \
+--release=${VERSION} \
+--patch_id=0 \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--run_storage_tests=false \
+--upgrade=true
 ```
 
-Monitor watson_speech upgrade
+Monitor watson_speechh upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=watson_speech
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
 ```
 
 #### 4.4.5 Upgrade Voice Gateway
@@ -837,22 +843,21 @@ cpd-cli manage get-cr-status \
 ```bash
 # Upgrade voice_gateway (5.3.x method)
 cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=voice_gateway \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
+--license_acceptance=true \
+--components=voice_gateway \
+--release=${VERSION} \
+--patch_id=0 \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--run_storage_tests=false \
+--upgrade=true
 ```
 
 Monitor voice_gateway upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=voice_gateway
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
 ```
 
 #### 4.4.6 Upgrade Db2 OLTP
@@ -860,22 +865,21 @@ cpd-cli manage get-cr-status \
 Upgrade db2oltp
 ```bash
 cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=db2oltp \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
+--license_acceptance=true \
+--components=db2oltp \
+--release=${VERSION} \
+--patch_id=0 \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--run_storage_tests=false \
+--upgrade=true
 ```
 
 Monitor db2oltp upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=db2oltp
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=db2oltp
 ```
 
 #### 4.4.7 Upgrade Cognos Analytics
@@ -883,22 +887,21 @@ cpd-cli manage get-cr-status \
 Upgrade cognos_analytics
 ```bash
 cpd-cli manage install-components \
-  --license_acceptance=true \
-  --components=cognos_analytics \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --image_pull_prefix=${IMAGE_PULL_PREFIX} \
-  --image_pull_secret=${IMAGE_PULL_SECRET} \
-  --run_storage_tests=false \
-  --upgrade=true
+--license_acceptance=true \
+--components=cognos_analytics \
+--release=${VERSION} \
+--patch_id=0 \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--run_storage_tests=false \
+--upgrade=true
 ```
 
 Monitor cognos_analytics upgrade
 ```bash
-cpd-cli manage get-cr-status \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=cognos_analytics
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=cognos_analytics
 ```
 
 ---
@@ -960,7 +963,7 @@ cpd-cli service-instance upgrade \
 
 Set the INSTANCE_VERSION environment variable to the version that corresponds to the version of IBM Software Hub on your cluster
 ```bash
-export INSTANCE_VERSION=	29.1.0
+export INSTANCE_VERSION=29.1.0
 ```
 
 Upgrade the service instances
@@ -1012,8 +1015,22 @@ You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
 **Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-updating-cpdbr-service-1)
 
-### For Environments Without Scheduling Service
+### For Environments With Scheduling Service
+```bash
+cpd-cli oadp install \
+--component=cpdbr-tenant \
+--cpdbr-hooks-image-prefix=${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd \
+--cpfs-image-prefix=${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs \
+--namespace=${OADP_OPERATOR_NS} \
+--tenant-operator-namespace=${PROJECT_CPD_INST_OPERATORS} \
+--cpd-scheduler-namespace=${PROJECT_SCHEDULING_SERVICE} \
+--skip-recipes=true \
+--upgrade=true \
+--log-level=debug \
+--verbose
+```
 
+### For Environments Without Scheduling Service
 ```bash
 cpd-cli oadp install \
 --component=cpdbr-tenant \
@@ -1051,11 +1068,4 @@ cpd-cli service-instance list --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 
 ---
 
-### Post Upgrade Migrations
-
-
----
-
 **End of Runbook**
-
-*Generated by CP4D Upgrade Automation Tool v1.2.0*
