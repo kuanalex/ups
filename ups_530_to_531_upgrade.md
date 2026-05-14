@@ -1063,8 +1063,7 @@ oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
 
 # List service instances
-cpd-cli service-instance list --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
-```
+cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 
 ---
 
