@@ -4,22 +4,22 @@
 
 ```
 CPD: 5.3.0
-OCP: 4.17
+OCP: 4.18.40
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 **To:**
 
 ```
 CPD: 5.3.1
-OCP: 4.17
+OCP: 4.18.40
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: cpd_platform,db2oltp,watson_speech,voice_gateway,watsonx_orchestrate,watsonx_ai,cognos_analytics,watsonx_governance
+Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 ---
@@ -71,9 +71,9 @@ Reference: [Mirroring images to private image registry](https://www.ibm.com/docs
 
 Ensure the following tools are installed and updated to the required versions:
 
-- **IBM Software Hub CLI**: Version 14.3.1.2
+- **IBM Software Hub CLI**: Version 14.3.1.3
 - **OpenShift CLI (oc)**: Compatible version for your cluster
-- **Helm CLI**: Version 3.16.3
+- **Helm CLI**: Version 4.1.4
 
 **Installation and Update Instructions:**
 
@@ -113,14 +113,17 @@ echo "Private Registry: ${PRIVATE_REGISTRY_LOCATION}"
 ```
 
 ### Login to OpenShift Cluster
-
 ```bash
 # Login using cpd-cli
 ${CPDM_OC_LOGIN}
+```
 
+```bash
 # Or login using oc directly
 ${OC_LOGIN}
+```
 
+```bash
 # Verify cluster access
 oc whoami
 oc get nodes
@@ -131,13 +134,14 @@ oc get nodes
 ```bash
 # Restart the OLM utils container with updated environment
 cpd-cli manage restart-container
+```
 
+```bash
 # Verify container is running
 podman ps | grep olm-utils
 ```
 
 ### Air Gapped Environment Prerequisites
-
 
 **⚠️ IMPORTANT**: Air gapped environment detected. Complete these steps before upgrading.
 
@@ -151,7 +155,6 @@ podman ps | grep olm-utils
 4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
 
 **Note**: Cluster-scoped resources and entitlements are applied in the [Upgrade Execution](#upgrade-execution) section.
-
 
 
 ### Advanced Service Prerequisites
