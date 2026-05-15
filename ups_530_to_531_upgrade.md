@@ -230,14 +230,8 @@ done
 ### Basic Cluster Validation
 
 ```bash
-# Check node status
-oc get nodes
-
-# Check cluster operators
-oc get co
-
-# Check cluster version
-oc get clusterversion
+# Check node, machineConfig, clusterOperators, clusterVersion
+oc get nodes,mcp,co,clusterversion
 ```
 
 ### Storage Validation
@@ -245,11 +239,11 @@ oc get clusterversion
 ```bash
 # Verify storage classes
 oc get sc
+```
 
+```bash
 # Check PVC status
 oc get pvc -n ${PROJECT_CPD_INST_OPERANDS}
-
-# Verify storage vendor health
 ```
 
 ### CPD Platform Validation
@@ -257,13 +251,19 @@ oc get pvc -n ${PROJECT_CPD_INST_OPERANDS}
 ```bash
 # Check CR status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+```
 
+```bash
 # Check for pods not running correctly (excludes completed jobs)
 oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
+```
 
+```bash
 # List service instances
 cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
+
+**Note: Fix any pod issues and ensure the service CRs are in Completed status before proceeding with the upgrade**
 
 ---
 
@@ -278,22 +278,30 @@ cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPE
 ```bash
 # Generate cluster-scoped resource definitions for scheduling service
 cpd-cli manage case-download \
-  --components=scheduler \
-  --release=${VERSION} \
-  --scheduler_ns=${PROJECT_SCHEDULING_SERVICE} \
-  --cluster_resources=true
+--components=scheduler \
+--patch_id=0 \ 
+--scheduler_ns=${PROJECT_SCHEDULING_SERVICE} \
+--cluster_resources=true
+```
 
+```bash
 # Change to work directory
 cd cpd-cli-workspace/olm-utils-workspace/work
+```
 
+```bash
 # Apply cluster-scoped resources
 oc apply -f cluster_scoped_resources.yaml \
   --server-side \
   --force-conflicts
+```
 
+```bash
 # Optional: Keep a record
 mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_SCHEDULING_SERVICE}-cluster_scoped_resources.yaml
+```
 
+```bash
 # Return to base directory
 cd -
 ```
@@ -305,18 +313,17 @@ cd -
 ```bash
 # Generate cluster-scoped resource definitions for CPD instance
 cpd-cli manage case-download \
-  --components=${COMPONENTS} \
-  --release=${VERSION} \
-  --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --cluster_resources=true
+--components=${COMPONENTS} \
+--release=${VERSION} \
+--patch_id=0 \ 
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--cluster_resources=true
 
 # Change to work directory
 cd cpd-cli-workspace/olm-utils-workspace/work
 
 # Apply cluster-scoped resources
-oc apply -f cluster_scoped_resources.yaml \
-  --server-side \
-  --force-conflicts
+oc apply -f cluster_scoped_resources.yaml --server-side --force-conflicts
 
 # Optional: Keep a record
 mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_CPD_INST_OPERATORS}-cluster_scoped_resources.yaml
