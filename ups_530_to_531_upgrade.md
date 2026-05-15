@@ -399,41 +399,42 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=cpd-enterprise \
-  --production=true
+  --production=false
 
 # Apply watsonx.ai license
 cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=watsonx-ai \
-  --production=true
+  --production=false
 
 # Apply watsonx.governance licenses
 cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=watsonx-gov-mm \
-  --production=true
+  --production=false
 
 cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=watsonx-gov-rc \
-  --production=true
+  --production=false
 
 # Apply watsonx Orchestrate license
 cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=watsonx-orchestrate \
-  --production=true
+  --production=false
 
-# Apply Watson Speech licenses
-cpd-cli manage apply-entitlement \
+# Apply Watson Speech licenses, skip for non prod
+# cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=speech-to-text
 
-cpd-cli manage apply-entitlement \
+# Skip for non prod
+# cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=text-to-speech
 
-# Apply Cognos Analytics license
+# Apply Cognos Analytics license, skip for non prod
 cpd-cli manage apply-entitlement \
   --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
   --entitlement=cognos-analytics
