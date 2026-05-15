@@ -745,6 +745,29 @@ oc patch -n openshift-storage backingstore noobaa-default-backing-store --type=m
 ```
 
 For StorageCluster ocs-storagecluster, add cpu: "3" for all resources as both requests and limits, add maxCount 8 and minCount 1 as multiCloudGateway.endpoints
+
+Patch StorageCluster ocs-storagecluster with:
+```bash
+oc patch storagecluster ocs-storagecluster -n openshift-storage --type merge --patch '
+{
+  "spec": {
+    "multiCloudGateway": {
+      "endpoints": {
+        "maxCount": 8,
+        "minCount": 1
+      }
+    },
+    "resources": {
+      "noobaa-agent": {"limits": {"cpu": "4", "memory": "8Gi"}, "requests": {"cpu": "4", "memory": "8Gi"}},
+      "noobaa-core": {"limits": {"cpu": "4", "memory": "8Gi"}, "requests": {"cpu": "4", "memory": "8Gi"}},
+      "noobaa-db": {"limits": {"cpu": "4", "memory": "8Gi"}, "requests": {"cpu": "4", "memory": "8Gi"}},
+      "noobaa-endpoint": {"limits": {"cpu": "4", "memory": "8Gi"}, "requests": {"cpu": "4", "memory": "8Gi"}}
+    }
+  }
+}'
+```
+
+Result should look like this:
 ```bash
 apiVersion: ocs.openshift.io/v1
 kind: StorageCluster
@@ -791,6 +814,25 @@ spec:
 ```
 
 For BackingStore noobaa-default-backing-store, set numVolumes to 4 and storage to 100Gi
+
+Patch BackStore noobaa-default-backing-store with:
+```bash
+oc patch backingstore noobaa-default-backing-store -n openshift-storage --type merge --patch '
+{
+  "spec": {
+    "pvPool": {
+      "numVolumes": 4,
+      "resources": {
+        "requests": {
+          "storage": "100Gi"
+        }
+      }
+    }
+  }
+}'
+```
+
+Result should look like this:
 ```bash
 apiVersion: noobaa.io/v1alpha1
 kind: BackingStore
@@ -809,6 +851,26 @@ spec:
 ```
 
 For NooBaa noobaa, add max_connections 2400 for dbConf
+
+Patch NooBaa noobaa with:
+```bash
+oc patch noobaa noobaa -n openshift-storage --type merge --patch '
+{
+  "spec": {
+    "dbConf": "max_connections 2400\n",
+    "coreResources": {
+      "limits": {"cpu": "4", "memory": "8Gi"},
+      "requests": {"cpu": "4", "memory": "8Gi"}
+    },
+    "dbResources": {
+      "limits": {"cpu": "4", "memory": "8Gi"},
+      "requests": {"cpu": "4", "memory": "8Gi"}
+    }
+  }
+}'
+```
+
+Result should look like this:
 ```bash
 apiVersion: noobaa.io/v1alpha1
 kind: NooBaa
