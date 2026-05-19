@@ -32,7 +32,7 @@ Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platfor
 - Upgrade Shared Cluster Components
 - Upgrade IBM Software Hub Platform and Services
 - Upgrade Service Instances
-- Upgrade CPDBR Service
+- Upgrade Cpdbr Service
 - Post Upgrade Validation
 
 ---
@@ -173,6 +173,16 @@ Some services require additional prerequisite software upgrades. Review [IBM Doc
 **GPU Operators** - [Upgrade if needed](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-operators-services-that-require-gpus-1) for GPU-enabled services
 
 **Red Hat OpenShift AI** - [Review upgrade requirements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-ai-1) if using OpenShift AI
+
+Based on the health check review, we've determined that some of these operators will need to be upgraded as follows
+
+| Operator | Current CSV | Target for 5.3.1 | Action |
+| --- | --- | --- | --- |
+| OpenShift Serverless | 1.37.1 | 1.37.x | No action required. |
+| OpenShift AI (RHOAI) | 2.21.1 | 2.25.1 | Upgrade required. |
+| NVIDIA GPU Operator | 25.3.3 | 26.3.x | Upgrade required. |
+| Node Feature Discovery | 4.17.0 | 4.18.x | Upgrade required to match <br>OCP/ODS version. |
+| IBM Events Operator | 5.2.1 | 6.0.0 | Upgrade required. |
 
 ---
 
@@ -919,7 +929,7 @@ Repeat the preceding steps to upgrade each service instance associated with this
 
 ---
 
-## Upgrade CPDBR Service
+## Upgrade Cpdbr Service
 
 You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
@@ -972,7 +982,5 @@ oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.
 
 # List service instances
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
-
----
 
 **End of Runbook**
