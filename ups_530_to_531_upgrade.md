@@ -53,6 +53,40 @@ If a private container registry is in-use to host the IBM Software Hub software 
 
 Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
 
+**Note**: Since the upgrade path is to 5.3.1.0 or 5.3.1 GA, we will need to ensure we specify --patch_id=0 in the following commands
+
+```bash
+case-download 
+list-images
+mirror-images
+list-patch
+apply-patch
+apply-cluster-components
+apply-scheduler
+apply-components
+install-components
+```
+
+Here is an example of the case-download syntax
+```bash
+cpd-cli manage case-download \
+--components=${COMPONENTS} \
+--release=${VERSION} \
+--patch_id=0 \
+--from_oci=true
+```
+
+Here is an example of the mirror-images syntax
+```bash
+cpd-cli manage mirror-images \
+--components=${COMPONENTS} \
+--release=${VERSION} \
+--patch_id=0 \
+--target_registry=${PRIVATE_REGISTRY_LOCATION} \
+--arch=${IMAGE_ARCH} \
+--case_download=false
+```
+
 #### The permissions required for the upgrade is ready
 - OpenShift cluster administrator permissions
 - IBM Software Hub administrator permissions
