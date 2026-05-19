@@ -585,32 +585,6 @@ non_olm:
       watsonxaiifm: true
 ```
 
-Backup the Orchestrate Assistant Postgres
-Identify the backup cronjob:
-
-export STORE_CRONJOB_POD=$(oc get pods -l component=store-cronjob --no-headers | awk 'NR==1{print $1}')
-echo $STORE_CRONJOB_POD
-Create a Debug pod and check for the latest "store.dump" file.
-
-oc debug ${STORE_CRONJOB_POD}
-
-
-ls -l /store-backups/
-Copy the name of the lastest backup file.
-
-Open up a duplicate terminal while the debug pod is still live and copy the backup out onto your bastion.
-
-export STORE_CRONJOB_DEBUG_POD=$(oc get pods | grep debug | awk '{print $1}')
-echo ${STORE_CRONJOB_DEBUG_POD}
-
-export STORE_DUMP_FILE=store.dump_<REPLACE WITH LATEST FILE TIME>
-echo ${STORE_DUMP_FILE}
-
-oc cp ${STORE_CRONJOB_DEBUG_POD}:/store-backups/${STORE_DUMP_FILE} ${STORE_DUMP_FILE}
-Back up the secret for this database.
-
-oc get secret wo-wa-auth-encryption -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > wo-wa-auth-encryption-backup.yaml
-
 #### Upgrade watsonx_orchestrate
 ```bash
 cpd-cli manage install-components \
