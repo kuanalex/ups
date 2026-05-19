@@ -3,25 +3,23 @@
 ## Author: Alex Kuan (alex.kuan@ibm.com)
 
 **From:**
-
 ```
 CPD: 5.3.0
 OCP: 4.18.40
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
+Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 **To:**
-
 ```
 CPD: 5.3.1
 OCP: 4.18.40
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
-Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
+Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 ---
@@ -30,7 +28,6 @@ Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platfor
 - Prerequisites
 - Pre Upgrade Steps
 - Pre Upgrade Health Check
-- Prepare Cluster for Upgrade
 - Upgrade Shared Cluster Components
 - Upgrade IBM Software Hub Platform and Services
 - Upgrade Service Instances
@@ -251,8 +248,6 @@ Check node, machineConfig, clusterOperators, clusterVersion
 oc get nodes,mcp,co,clusterversion
 ```
 
-#### Storage Validation
-
 Verify storage classes
 ```bash
 oc get sc
@@ -262,8 +257,6 @@ Check PVC status
 ```bash
 oc get pvc -n ${PROJECT_CPD_INST_OPERANDS}
 ```
-
-#### CPD Platform Validation
 
 Check CR status
 ```bash
@@ -284,56 +277,6 @@ cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPE
 
 ---
 
-## Prepare Cluster for Upgrade
-
-#### Update Cluster-Scoped Resources for Shared Components
-
-**Reference**: [Updating cluster-scoped resources for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components-1)
-
-Generate cluster-scoped resource definitions for scheduling service
-```bash
-cpd-cli manage case-download \
---components=scheduler \
---release=${VERSION} \
---patch_id=0 \ 
---scheduler_ns=${PROJECT_SCHEDULING_SERVICE} \
---cluster_resources=true
-```
-
-Run the 'oc apply -f' command returned in the terminal, for example
-```bash
-oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
-```
-
-#### Creating image pull secrets for shared cluster components
-
-**Reference**: [Creating image pull secrets for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-creating-image-pull-secrets-shared-cluster-components)
-
-Log in to Red Hat® OpenShift® Container Platform as a user with sufficient permissions to complete the task
-```bash
-${OC_LOGIN}
-```
-
-Create a file named dockerconfig.json based on where your cluster pulls images from
-```bash
-cat <<EOF > dockerconfig.json 
-{
-  "auths": {
-    "${PRIVATE_REGISTRY_LOCATION}": {
-      "auth": "${IMAGE_PULL_CREDENTIALS}"
-    }
-  }
-}
-EOF
-```
-
-Create the image pull secret in the project where you plan to install the scheduling service:
-```bash
-oc create secret docker-registry ${IMAGE_PULL_SECRET} \
---from-file ".dockerconfigjson=dockerconfig.json" \
---namespace=${PROJECT_SCHEDULING_SERVICE}
-```
-
 ## Upgrade Shared Cluster Components
 
 #### Upgrade IBM Licensing
@@ -352,31 +295,6 @@ cpd-cli manage apply-cluster-components \
 Verify licensing pods are running
 ```bash
 oc get pods -n ${PROJECT_LICENSE_SERVICE}
-```
-
-#### Upgrade Scheduler (if installed)
-
-**Reference**: [Upgrading the scheduling service](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.3.x?topic=components-upgrading-scheduling-service)
-
-Check if scheduler is installed
-```bash
-oc get scheduling -A
-```
-
-If scheduler exists, upgrade it
-```bash
-cpd-cli manage apply-scheduler \
---release=${VERSION} \
---patch_id=0 \
---license_acceptance=true \
---scheduler_ns=${PROJECT_SCHEDULING_SERVICE} \
---image_pull_prefix=${IMAGE_PULL_PREFIX} \
---image_pull_secret=${IMAGE_PULL_SECRET}
-```
-
-Verify scheduler pods are running
-```bash
-oc get pods -n ${PROJECT_SCHEDULING_SERVICE}
 ```
 
 #### Update Cluster-Scoped Resources for CPD Instance
@@ -686,20 +604,23 @@ DROP TABLE IF EXISTS migration_log;
 "
 ```
 
-**Removing Redis CronJob** - This section is applicable only if you upgrade to Version 5.3.1 Patch 2
+#### Apply WxO Hotfix 4
 
-After you upgrade to Version 5.3.1 Patch 2, you must remove the Redis Cronjob as Licensing Redis Cronjob is no longer supported
-
-Run the following command to delete the Redis Cronjob:
-```bash
-oc delete cronjob wo-watson-orchestrate-redis-cronjob --ignore-not-found
-```
+After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.3.1 Hotfix 4
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
 
-Follow the steps to apply IBM watsonx Orchestrate release 5.3.1 Hotfix 4
+Steps to be included upon 5.3.1 Hotfix 4 release
+```bash
+TBD
+```
 
 #### Upgrade Watsonx Ai
+
+Export the XAI_COMPONENT_TYPE variable
+```bash
+XAI_COMPONENT_TYPE=watsonx_ai
+```
 
 Upgrade watsonx_ai
 ```bash
@@ -721,6 +642,25 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 ```
 
 #### Upgrade Watsonx Governance
+
+Create the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace/work directory
+```bash
+---
+# ............................................................................
+# watsonx.governance parameters
+# ............................................................................
+non_olm:
+  watsonxGovernance:
+    installType: all
+    enableFactsheet: "true"
+    enableOpenpages: "true"
+    enableOpenscale: "true"
+#   openpagesInstanceCR: "op-wxgov-instance"
+#   openPages:
+#     databaseType: internal
+#     database: Db2
+#     dbSecretName: <secret-name>
+```
 
 Upgrade watsonx_governance
 ```bash
@@ -744,21 +684,6 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Watson Speech
 
-Before upgrading Watson Speech, confirm/update the following configurations
-
-Increase resources for Multi cloud object gateway (Note: This was performed on Prod in the previous 5.3.0 upgrade)
-```bash
-oc patch -n openshift-storage storageclusters.ocs.openshift.io ocs-storagecluster --type merge --patch '{"spec": {"resources": {"noobaa-agent": {"limits": {"memory": "8Gi"},"requests": {"memory": "8Gi"}},"noobaa-core": {"limits": {"memory":"8Gi"},"requests": {"memory": "8Gi"}},"noobaa-db": {"limits": {"memory": "8Gi"},"requests": {"memory": "8Gi"}},"noobaa-endpoint": {"limits": {"memory": "8Gi"},"requests": {"memory": "8Gi"}}}}}'
-
-oc patch -n openshift-storage backingstore noobaa-default-backing-store --type=merge --patch='{"spec":{"pvPool":{"numVolumes": 1, "resources":{"limits":{"memory": "8Gi"}}}}}'
-```
-
-For StorageCluster ocs-storagecluster, add cpu: "3" for all resources as both requests and limits, add maxCount 8 and minCount 1 as multiCloudGateway.endpoints
-
-For BackingStore noobaa-default-backing-store, set numVolumes to 4 and storage to 100Gi
-
-For NooBaa noobaa, add max_connections 2400 for dbConf
-
 Upgrade watson_speech
 ```bash
 cpd-cli manage install-components \
@@ -774,7 +699,7 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-Monitor watson_speechh upgrade
+Monitor watson_speech upgrade
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
 ```
@@ -955,21 +880,6 @@ Repeat the preceding steps to upgrade each service instance associated with this
 You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
 **Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-updating-cpdbr-service-1)
-
-For Environments With Scheduling Service
-```bash
-cpd-cli oadp install \
---component=cpdbr-tenant \
---cpdbr-hooks-image-prefix=${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd \
---cpfs-image-prefix=${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs \
---namespace=${OADP_OPERATOR_NS} \
---tenant-operator-namespace=${PROJECT_CPD_INST_OPERATORS} \
---cpd-scheduler-namespace=${PROJECT_SCHEDULING_SERVICE} \
---skip-recipes=true \
---upgrade=true \
---log-level=debug \
---verbose
-```
 
 For Environments Without Scheduling Service
 ```bash
