@@ -1,5 +1,7 @@
 # UPS Production Cluster CP4D 5.3.0 to 5.3.1 Upgrade
 
+## Author: Alex Kuan (alex.kuan@ibm.com)
+
 **From:**
 
 ```
@@ -181,18 +183,10 @@ oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_b
 
 #### Air Gapped Environment Prerequisites
 
-**⚠️ IMPORTANT**: Air gapped environment detected. Complete these steps before upgrading.
-
-**Private Registry**: UPDATE_WITH_PRIVATE_REGISTRY_URL
-
-**Required Steps** (see [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=requirements-preparing-upgrade-in-restricted-network)):
-
 1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
 2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)** for all components
 3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
 4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
-
-**Note**: Cluster-scoped resources and entitlements are applied in the [Upgrade Execution](#upgrade-execution) section
 
 #### Advanced Service Prerequisites
 
@@ -431,47 +425,47 @@ cpd-cli manage deploy-events-operator \
 ```bash
 # Apply IBM Cloud Pak for Data Enterprise Edition entitlement
 cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=cpd-enterprise \
-  --production=false
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=cpd-enterprise \
+--production=false
 
 # Apply watsonx.ai license
 cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=watsonx-ai \
-  --production=false
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=watsonx-ai \
+--production=false
 
 # Apply watsonx.governance licenses
 cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=watsonx-gov-mm \
-  --production=false
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=watsonx-gov-mm \
+--production=false
 
 cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=watsonx-gov-rc \
-  --production=false
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=watsonx-gov-rc \
+--production=false
 
 # Apply watsonx Orchestrate license
 cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=watsonx-orchestrate \
-  --production=false
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=watsonx-orchestrate \
+--production=false
 
 # Apply Watson Speech licenses, skip for non prod
 # cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=speech-to-text
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=speech-to-text
 
 # Skip for non prod
 # cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=text-to-speech
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=text-to-speech
 
 # Apply Cognos Analytics license, skip for non prod
 cpd-cli manage apply-entitlement \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --entitlement=cognos-analytics
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--entitlement=cognos-analytics
 ```
 
 ---
@@ -509,7 +503,7 @@ Create the image pull secret in the operands project for the instance
 ```bash
 oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 --from-file ".dockerconfigjson=dockerconfig.json" \
---namespace=${PROJECT_CPD_INST_OPERATORS}
+--namespace=${PROJECT_CPD_INST_OPERANDS}
 ```
 
 ---
@@ -518,8 +512,8 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
 
+Upgrade CPD platform using install-components
 ```bash
-# Upgrade CPD platform using install-components (Est. 32 minutes)
 cpd-cli manage install-components \
 --license_acceptance=true \
 --components=cpd_platform \
@@ -1016,5 +1010,6 @@ oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.
 
 # List service instances
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
+```
 
 **End of Runbook**
