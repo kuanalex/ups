@@ -25,13 +25,15 @@ Components: ibm-licensing,scheduler,ibm_events_operator,ccs,cpfs,zen,cpd_platfor
 ---
 
 ## Table of Contents
-- Prerequisite checks
-- Pre upgrade checks
-- Prepare cluster for upgrade
-- Upgrade services
-- Upgrade service instances
-- Post upgrade tasks
-- Post upgrade validation
+- Prerequisites
+- Pre Upgrade Steps
+- Pre Upgrade Health Check
+- Prepare Cluster for Upgrade
+- Upgrade Shared Cluster Components
+- Upgrade IBM Software Hub Platform and Services
+- Upgrade Service Instances
+- Upgrade CPDBR Service
+- Post Upgrade Validation
 
 ---
 
@@ -297,7 +299,7 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 --namespace=${PROJECT_SCHEDULING_SERVICE}
 ```
 
-### Upgrade Shared Cluster Components
+## Upgrade Shared Cluster Components
 
 #### Upgrade IBM Licensing
 
@@ -468,7 +470,7 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 
 ---
 
-### Upgrade IBM Software Hub Platform
+## Upgrade IBM Software Hub Platform and Services
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
 
@@ -815,11 +817,11 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 ---
 
 
-## Service Instance Upgrades
+## Upgrade Service Instances
 
 After upgrading service CRs, some services require additional instance upgrades
 
-### Prerequisites
+#### Prerequisites
 
 1. Complete all CR upgrades successfully
 2. Create a CPD profile with these permissions:
@@ -831,7 +833,7 @@ After upgrading service CRs, some services require additional instance upgrades
 
 ---
 
-### Upgrading Service Instances
+#### Upgrading Service Instances
 
 Get a list of all service instances using the following command
 ```bash
@@ -917,13 +919,13 @@ Repeat the preceding steps to upgrade each service instance associated with this
 
 ---
 
-## Upgrade cpdbr Service
+## Upgrade CPDBR Service
 
 You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
 **Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-updating-cpdbr-service-1)
 
-### For Environments With Scheduling Service
+For Environments With Scheduling Service
 ```bash
 cpd-cli oadp install \
 --component=cpdbr-tenant \
@@ -938,7 +940,7 @@ cpd-cli oadp install \
 --verbose
 ```
 
-### For Environments Without Scheduling Service
+For Environments Without Scheduling Service
 ```bash
 cpd-cli oadp install \
 --component=cpdbr-tenant \
