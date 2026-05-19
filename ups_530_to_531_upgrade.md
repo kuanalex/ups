@@ -56,7 +56,6 @@ If a private container registry is in-use to host the IBM Software Hub software 
 Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
 
 **Note**: Since the upgrade path is to 5.3.1.0 or 5.3.1 GA, we will need to ensure we specify --patch_id=0 in the following commands
-
 ```bash
 case-download 
 list-images
@@ -242,9 +241,6 @@ for i in $(oc api-resources | grep cpd.ibm.com | awk '{print $1}' | grep -v zene
     oc get $i $x -o jsonpath={.spec} | jq
   done
 done
-
-# Review output for any image_digests fields
-# Document any hot fixes/patches that need to be removed before upgrade
 ```
 
 #### Basic Cluster Validation
@@ -377,8 +373,8 @@ cpd-cli manage apply-scheduler \
 --image_pull_secret=${IMAGE_PULL_SECRET}
 ```
 
+Verify scheduler pods are running
 ```bash
-# Verify scheduler pods are running
 oc get pods -n ${PROJECT_SCHEDULING_SERVICE}
 ```
 
@@ -788,8 +784,8 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Voice Gateway
 
+Upgrade voice_gateway
 ```bash
-# Upgrade voice_gateway (5.3.x method)
 cpd-cli manage install-components \
 --license_acceptance=true \
 --components=voice_gateway \
@@ -998,17 +994,23 @@ cpd-cli oadp install \
 
 ## Post Upgrade Validation
 
+Check CR status
 ```bash
-# Check CR status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+```
 
-# Check for pods not running correctly (excludes completed jobs)
+Check for pods not running correctly
+```bash
 oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
+```
 
-# Verify CPD version
+Verify CPD version
+```bash
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
+```
 
-# List service instances
+List service instances
+```bash
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
 
