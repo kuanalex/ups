@@ -301,11 +301,6 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
 
-Update the COMPONENTS list to include only relevant components
-```bash
-export COMPONENTS=ibm_events_operator,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
-```
-
 Generate cluster-scoped resource definitions for CPD instance
 ```bash
 cpd-cli manage case-download \
@@ -330,13 +325,19 @@ Log the cpd-cli in to the Red Hat OpenShift Container Platform cluster
 ${CPDM_OC_LOGIN}
 ```
 
-Generate cluster-scoped resource definitions for CPD instance
+Download case packages for ibm_events_operator
 ```bash
 cpd-cli manage case-download \
---components=ibm_events_operator \
 --release=${VERSION} \
 --patch_id=0 \
---operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--components=ibm_events_operator \
+--from_oci=true
+```
+
+Generate cluster-scoped resource definitions for CPD instance
+```bash
+cpd-cli manage deploy-events-operator \
+--release=${VERSION} \
 --cluster_resources=true
 ```
 
