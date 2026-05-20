@@ -427,6 +427,11 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
 
+Remove the entire spec/image_digests from ZenService lite-cr before proceeding
+```bash
+oc patch zenservice lite-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
+```
+
 Upgrade CPD platform using install-components
 ```bash
 cpd-cli manage install-components \
@@ -484,7 +489,7 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 
 #### Upgrade Watsonx Orchestrate
 
-If you plan to upgrade the previous versions of watsonx™ Orchestrate with custom upgrade options, specify the appropriate options in a file named install-options.yml in the cpd-cli work directory
+If you plan to upgrade the previous versions of watsonx Orchestrate with custom upgrade options, specify the appropriate options in a file named install-options.yml in the cpd-cli work directory
 
 You can identify the location of the work folder using below command in the cpd-cli work directory
 ```bash
@@ -501,6 +506,18 @@ non_olm:
     installMode: "agentic_assistant"
     watsonxAI:
       watsonxaiifm: true
+```
+
+**IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests
+
+Remove the image_digests sectionfrom Watsonxaiifm 
+```bash
+oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
+```
+
+Remove the digestOverrides section from WatsonxOrchestrate
+```bash
+oc patch watsonxorchestrate wo -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image/digestOverrides"}]'
 ```
 
 #### Upgrade watsonx_orchestrate
