@@ -596,8 +596,8 @@ SET atm_migration.new_url = 'https://<SERVER_INTERNAL_HOSTNAME>:9045';
 
 Example configuration:
 ```
-SET atm_migration.old_url = 'http://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9044';
-SET atm_migration.new_url = 'https://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9045';
+SET atm_migration.old_url = 'http://wo-agentic-task-manager.cpd-instance.svc.cluster.local:9044';
+SET atm_migration.new_url = 'https://wo-agentic-task-manager.cpd-instance.svc.cluster.local:9045';
 ```
 
 To run the migration script on PostgreSQL database
