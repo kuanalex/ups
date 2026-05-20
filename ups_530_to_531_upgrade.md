@@ -578,7 +578,7 @@ kubectl get secret wo-agentic-task-manager-server-env \
 Important: Store the value of SERVER_INTERNAL_HOSTNAME for later use, ensure that the value for SERVER_INTERNAL_PROTOCOL is set to https and SERVER_INTERNAL_PORT is set to 9045
 ```bash
 SERVER_INTERNAL_PROTOCOL=https
-SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance-1.svc.cluster.local
+SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance.svc.cluster.local
 SERVER_INTERNAL_PORT=9045
 ```
 
