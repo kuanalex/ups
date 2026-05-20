@@ -571,7 +571,7 @@ $OC_LOGIN
 Extract the current ATM server configuration from the Kubernetes secret
 ```bash
 kubectl get secret wo-agentic-task-manager-server-env \
-  -n cpd-instance-1 \
+  -n ${PROJECT_CPD_INST_OPERANDS} \
 -o jsonpath='{.data.\.secret\.env}' | base64 --decode | grep SERVER_INTERNAL
 ```
 
