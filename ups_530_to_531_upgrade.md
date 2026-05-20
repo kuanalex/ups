@@ -303,7 +303,7 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 Update the COMPONENTS list to include only relevant components
 ```bash
-export COMPONENTS=cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
+export COMPONENTS=ibm_events_operator,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 Generate cluster-scoped resource definitions for CPD instance
@@ -328,6 +328,21 @@ oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_reso
 Log the cpd-cli in to the Red Hat OpenShift Container Platform cluster
 ```bash
 ${CPDM_OC_LOGIN}
+```
+
+Generate cluster-scoped resource definitions for CPD instance
+```bash
+cpd-cli manage case-download \
+--components=ibm_events_operator \
+--release=${VERSION} \
+--patch_id=0 \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--cluster_resources=true
+```
+
+Run the 'oc apply -f' command returned in the terminal, for example
+```bash
+oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
 ```
 
 Run the following command to upgrade the IBM Events Operator
