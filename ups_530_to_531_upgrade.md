@@ -33,6 +33,7 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 - Upgrade Service Instances
 - Upgrade Cpdbr Service
 - Post Upgrade Validation
+- Troubleshooting References
 
 ---
 
@@ -948,5 +949,15 @@ Validate 'expose:external-regional' label in the cpd route, add the label "expos
 ```bash
 oc get route cpd -o yaml
 ```
+
+## Troubleshooting References
+
+- [Known issues for watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonx-orchestrate)
+- [Known issues and limitations for Common core services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-common-core-services)
+- [Known issues and limitations for IBM watsonx.ai](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonxai)
+- [Known issues and limitations for watsonx.governance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonxgovernance)
+- [Known issues and limitations for Watson Speech services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watson-speech-services)
+- [Known issues and limitations for Db2 and Db2 Warehouse](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-db2-db2-warehouse)
+- [Known issues and limitations in Cognos Analytics](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-cognos-analytics)
 
 **End of Runbook**
