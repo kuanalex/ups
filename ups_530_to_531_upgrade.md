@@ -939,14 +939,14 @@ Check for pods not running correctly
 oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 ```
 
-Verify CPD version
-```bash
-oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
-```
-
 List service instances
 ```bash
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
+```
+
+Validate 'expose:external-regional' label in the cpd route, add the label "expose:external-regional" to your cpd-route as required
+```bash
+oc get route cpd -o yaml
 ```
 
 **End of Runbook**
