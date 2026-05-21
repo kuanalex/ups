@@ -178,14 +178,14 @@ Take a backup of the temporary patches for watson assistant
 oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
 
-Air Gapped Environment Prerequisites
+#### Air Gapped Environment Prerequisites
 
 1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
 2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)** for all components
 3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
 4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
 
-Advanced Service Prerequisites
+#### Advanced Service Prerequisites
 
 Some services require additional prerequisite software upgrades. Review [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-upgrading-prerequisite-software-1) for details
 
@@ -213,7 +213,7 @@ Based on the health check review, we've determined that some of these operators 
 
 ## Pre Upgrade Health Check
 
-Run Comprehensive Health Check
+#### Run Comprehensive Health Check
 
 Run CPD health check (includes cluster, nodes, operands, operators)
 ```bash
@@ -226,7 +226,7 @@ cpd-cli health runcommand \
 --save
 ```
 
-Check for Hot Fixes and Patches
+#### Check for Hot Fixes and Patches
 
 Check for image_digests in service CRs (indicates hot fixes/patches)
 ```bash
@@ -241,7 +241,7 @@ for i in $(oc api-resources | grep cpd.ibm.com | awk '{print $1}' | grep -v zene
 done
 ```
 
-Basic Cluster Validation
+#### Basic Cluster Validation
 
 Check node, machineConfig, clusterOperators, clusterVersion
 ```bash
@@ -279,7 +279,7 @@ cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPE
 
 ## Upgrade Shared Cluster Components
 
-Upgrade IBM Licensing
+#### Upgrade IBM Licensing
 
 **Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.3.x?topic=upgrading-shared-cluster-components)
 
@@ -297,7 +297,7 @@ Verify licensing pods are running
 oc get pods -n ${PROJECT_LICENSE_SERVICE}
 ```
 
-Update Cluster-Scoped Resources for CPD Instance
+#### Update Cluster-Scoped Resources for CPD Instance
 
 **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
 
@@ -316,7 +316,7 @@ Run the 'oc apply -f' command returned in the terminal, for example
 oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
 ```
 
-Upgrading the IBM Events Operator
+#### Upgrading the IBM Events Operator
 
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-upgrading-events-operator-1)
 
@@ -354,7 +354,7 @@ cpd-cli manage deploy-events-operator \
 --events_operand_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
 
-Apply Entitlements
+#### Apply Entitlements
 
 **Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
 
@@ -453,7 +453,7 @@ Remove the entire spec/image_digests from ZenService lite-cr before proceeding
 oc patch zenservice lite-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
-Upgrade CPD platform using install-components
+#### Upgrade CPD platform using install-components
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -483,7 +483,7 @@ Verify platform version
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
 ```
 
-Reapply RSI Patches
+#### Reapply RSI Patches
 
 If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
 ```bash
@@ -508,7 +508,7 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 
 **Individual Service Upgrade (For More Control)**
 
-Upgrade Watsonx Orchestrate
+#### Upgrade Watsonx Orchestrate
 
 If you plan to upgrade the previous versions of watsonx Orchestrate with custom upgrade options, specify the appropriate options in a file named install-options.yml in the cpd-cli work directory
 
@@ -651,7 +651,7 @@ Steps to be included upon 5.3.1 Hotfix 4 release
 TBD
 ```
 
-Upgrade Watsonx Ai
+#### Upgrade Watsonx Ai
 
 Export the XAI_COMPONENT_TYPE variable
 ```bash
@@ -677,7 +677,7 @@ Monitor watsonx_ai upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_ai
 ```
 
-Upgrade Watsonx Governance
+#### Upgrade Watsonx Governance
 
 Create the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace/work directory
 ```bash
@@ -718,7 +718,7 @@ Monitor watsonx_governance upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_governance
 ```
 
-Upgrade Watson Speech
+#### Upgrade Watson Speech
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -738,7 +738,7 @@ Monitor watson_speech upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
 ```
 
-Upgrade Voice Gateway
+#### Upgrade Voice Gateway
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -758,7 +758,7 @@ Monitor voice_gateway upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
 ```
 
-Upgrade Db2 OLTP
+#### Upgrade Db2 OLTP
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -778,7 +778,7 @@ Monitor db2oltp upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=db2oltp
 ```
 
-Upgrade Cognos Analytics
+#### Upgrade Cognos Analytics
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -824,7 +824,7 @@ Get a list of all service instances using the following command
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
 
-Upgrade Db2oltp service instances
+#### Upgrade Db2oltp service instances
 
 Get the list of Db2 service instances
 ```bash
@@ -853,7 +853,7 @@ cpd-cli service-instance upgrade \
 --profile=${CPD_PROFILE_NAME}
 ```
 
-Upgrade Cognos Analytics service instances
+#### Upgrade Cognos Analytics service instances
 
 Set the INSTANCE_VERSION environment variable to the version that corresponds to the version of IBM Software Hub on your cluster
 ```bash
@@ -869,7 +869,7 @@ cpd-cli service-instance upgrade \
 --all
 ```
 
-Upgrade Openpages service instances
+#### Upgrade Openpages service instances
 
 Get the list of OpenPages service instances
 ```bash
