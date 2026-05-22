@@ -991,23 +991,118 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 ```
 
 #### Upgrade Watson Speech
+
+Before proceeding with the upgrade, save your current Watson Speech custom resource
+```bash
+oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > watson-speech-cr-backup.yaml
+```
+
+**Important Note:** During the upgrade process, any custom configurations in the Watson Speech custom resource that are not managed by the cpd-cli (Helm) upgrade process may be lost
+
+After the upgrade completes, review your saved custom resource backup (`watson-speech-cr-backup.yaml`) and manually re-apply any custom configurations that were not preserved
+
+Leave out the `watsonSpeech` section in the values.yaml to preserve your custom resource spec during the upgrade. Example install-options.yaml file
+```yaml
+non_olm:
+  global:
+    blockStorageClass: <ocs-storagecluster-ceph-rbd>
+    fileStorageClass: <ocs-storagecluster-cephfs>
+```
+
+
+Example cpd-cli install-components upgrade command
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watson_speech \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
 --image_pull_secret=${IMAGE_PULL_SECRET} \
---run_storage_tests=false \
+--param-file=/tmp/work/install-options.yml \
 --upgrade=true
 ```
 
-Monitor watson_speech upgrade
+Monitor watson_speech upgrade, wait until the status shows `Completed` or `Ready`.
+```bash
+oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -w
+```
+
+Check the cr status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
+```
+
+After the upgrade completes, compare your current custom resource with the backup you created earlier
+
+View the backup
+```bash
+cat watson-speech-cr-backup.yaml
+```
+
+View the current CR
+```bash
+oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
+```
+
+If any custom configurations were lost during the upgrade (such as custom resource request/limits/replicas, GW HPA, or other manual modifications), re-apply them by editing the custom resource
+```bash
+oc edit WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+After the upgrade completes, apply the image overrides to use the new chuck runtime images and updated models
+```bash
+oc edit WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+Add or update the following sections under `spec`
+```yaml
+spec:
+  images:
+    am_patcher_chuck:
+      digest: sha256:2a24058a667b1f9026d49bda2e0ddee8f0f88f4e9760eaf35961c854525eb718
+    stt_runtime_chuck:
+      digest: sha256:2a24058a667b1f9026d49bda2e0ddee8f0f88f4e9760eaf35961c854525eb718
+    tts_runtime_chuck:
+      digest: sha256:2a24058a667b1f9026d49bda2e0ddee8f0f88f4e9760eaf35961c854525eb718
+  global:
+    genericModels:
+      image: generic-models@sha256:2dbbc1f1f8a9860765a60ba27ea181761196f776044b10388001befaf3b0046e
+    sttModels:
+      deDe:
+        digest: sha256:17eeb6230026792e6cb9471ab4cb48fae34cef6202539ecefd30bc5e0f080e6c
+        enabled: true
+      frFrTelephonyLSM:
+        digest: sha256:35b79279ecb9d695a5c8c69e5bd8e172e040e87f4ed8702cdd5090f84be39fa4
+        enabled: true
+      nlNlTelephony:
+        digest: sha256:940c93833760e802044b6c16e83d83696d21a464c56f723dfe68ba4d9986abc3
+        enabled: true
+```
+
+**Note:** Only include the models you want to enable. Set `enabled: true` for models you wish to use
+
+Save and exit the editor
+
+The Speech operator will reconcile the changes and update the deployments
+
+After applying the image overrides, the Speech operator will reconcile the custom resource and update the components
+
+Monitor the Speech operator reconciliation
+```bash
+oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -w
+```
+
+Check that the new models are being uploaded. A new `speech-cr-stt-models` job will spawn to upload the updated models to object storage
+```bash
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -w | grep speech-cr-stt-models
+```
+
+After the models are uploaded, verify that the new STT/TTS runtime pods are rolled out with newer chuck image
+```bash
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -w | grep -E "speech-cr-(stt|tts)-runtime"
 ```
 
 #### Upgrade Voice Gateway
