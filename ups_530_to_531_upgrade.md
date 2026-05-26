@@ -43,7 +43,7 @@ Backup of the cluster is complete
 
 Backup your IBM Software Hub cluster before the upgrade
 
-Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=administering-backing-up-restoring-software-hub).
+Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=administering-backing-up-restoring-software-hub)
 
 **Note**: Some services don't support the offline OADP backup. Review the backup documentation and take the dedicated approach when necessary
 
@@ -128,7 +128,7 @@ Environment Variables Setup (cpd_vars.sh)
 
 Ensure your environment variables script is configured correctly
 
-**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cri-updating-your-environment-variables-script-1).
+**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cri-updating-your-environment-variables-script-1)
 
 Source your environment variables script and verify key variables are set
 ```bash
@@ -207,7 +207,7 @@ Based on the health check review, we've determined that some of these operators 
 | OpenShift Serverless | 1.37.1 | 1.37.x | No action required. |
 | OpenShift AI (RHOAI) | 2.21.1 | 2.25.1 | Upgrade required. |
 | NVIDIA GPU Operator | 25.3.3 | 26.3.x | Upgrade required. |
-| Node Feature Discovery | 4.17.0 | 4.18.x | Upgrade required to match <br>OCP/ODS version. |
+| Node Feature Discovery | 4.17.0 | 4.18.x | Upgrade required to match OCP/ODS version. |
 | IBM Events Operator | 5.2.1 | 6.0.0 | Upgrade required. |
 
 ---
