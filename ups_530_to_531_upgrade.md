@@ -532,12 +532,21 @@ non_olm:
 
 **IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests
 
-Remove the image_digests sectionfrom Watsonxaiifm 
+Remove the image_digests section from Watsonxaiifm 
 ```bash
 oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
-Remove the digestOverrides section from WatsonxOrchestrate
+In the WatsonxOrchestrate CR, there are two image digestOverrides which will need to be removed
+```bash
+spec:
+    image:
+      digestOverrides:
+        wxo-server-conversation_controller: sha256:e481eae84d5a412b25ebc4b6e982face5899503b839f69c7f7cae6c05df424de
+        wxo-server-server: sha256:d75246e301a1e4bd62fae7f90af32ace1344c50b5e5c710b1a5e4873e0cdbd24
+```
+
+Remove the digestOverrides section from WatsonxOrchestrate manually or by using the following patch command, which should remove the /spec/image/digestOverrides section of the yaml
 ```bash
 oc patch watsonxorchestrate wo -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image/digestOverrides"}]'
 ```
