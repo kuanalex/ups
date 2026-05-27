@@ -179,6 +179,21 @@ Take a backup of the temporary patches for watson assistant
 oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
 
+List all of the temporay patches in the operands namespace
+```bash
+oc get temporarypatch -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+For all patches that you want to retain, use the following command:
+```bash
+oc label temporarypatch <patch_name> type=critical-configuration
+```
+
+For example
+```bash
+oc label temporarypatch wa-store-assistant-limits type=critical-configuration
+```
+
 #### Air Gapped Environment Prerequisites
 
 1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
