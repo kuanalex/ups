@@ -1315,7 +1315,11 @@ cpd-cli oadp install \
 --verbose
 ```
 
-**Note**: This upgrade should be performed after all services have been upgraded.
+**Note**: This upgrade should be performed after all services have been upgraded
+
+**Note2**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.3.1.x in the air-gapped registry instead of the mirrored 5.3.1 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
+
+**Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.3.1.5 tag
 
 ---
 
