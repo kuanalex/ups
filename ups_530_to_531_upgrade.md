@@ -664,7 +664,7 @@ export PROJECT_CPD_INST_OPERATORS=ups-wx-operators
 export PROJECT_CPD_INST_OPERANDS=ups-wx-operands
 ```
 
-**Note**: You will need to install Skopeo and irror the operator and operand images before proceeding
+**Note**: You will need to install Skopeo and mirror the operator and operand images before proceeding
 
 Create hotfix5314.sh 
 ```bash
