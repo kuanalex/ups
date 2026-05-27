@@ -670,6 +670,7 @@ DROP TABLE IF EXISTS migration_log;
 After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.3.1 Hotfix 4
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
+
 **Reference**: [Applying the watsonx Orchestrate 5.3.1 hotfix (Hotfix 4)
 ](https://www.ibm.com/support/pages/applying-watsonx-orchestrate-531-hotfix-hotfix-4)
 
