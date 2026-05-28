@@ -581,6 +581,36 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
+**Note**: During non-prod upgrade an issue was encountered during Watsonx Orchestrate upgrade with Watson Assistant
+
+The ephemeralDeployment data type was updated from Boolean to String, and this required an edit on the wo-wa-data-governor-opensearch-ephemeral temporarypatch in this section
+```bash
+spec:
+  apiVersion: assistant.watson.ibm.com/v1
+  kind: WatsonAssistant
+  name: wo-wa
+  patch:
+    data-governor:
+      datagovernoroverride:
+        spec:
+          dependencies:
+            opensearch:
+------------> ephemeralDeployment: true
+```
+
+Update the ephemeralDeployment value to a string
+```bash
+oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral \
+  -n ups-wx-operands \
+  --type=merge \
+  -p '{"spec":{"patch":{"data-governor":{"datagovernoroverride":{"spec":{"dependencies":{"opensearch":{"ephemeralDeployment":"true"}}}}}}}}'
+```
+
+Validate the patch updates
+```bash
+oc get patch wo-wa-data-governor-opensearch-ephemeral -o yaml
+```
+
 Monitor watsonx_orchestrate upgrade
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_orchestrate
