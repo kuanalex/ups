@@ -179,7 +179,7 @@ Take a backup of the temporary patches for watson assistant
 oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
 
-List all of the temporay patches in the operands namespace
+List all of the temporary patches in the operands namespace
 ```bash
 oc get temporarypatch -n ${PROJECT_CPD_INST_OPERANDS}
 ```
@@ -342,12 +342,12 @@ If the kafka controller and broker pods are in CrashLoopBackOff status, check th
 
 For the broker KafkaNodePool
 ```bash
-oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n cpd-instance --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
 ```
 
 For the controller KafkaNodePool
 ```bash
-oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n cpd-instance --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
 ```
 
 Once these pods are stable, proceed with upgrading the Events operator, and continue to monitor for memory issues
