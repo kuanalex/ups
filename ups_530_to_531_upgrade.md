@@ -242,21 +242,6 @@ cpd-cli health runcommand \
 --save
 ```
 
-#### Check for Hot Fixes and Patches
-
-Check for image_digests in service CRs (indicates hot fixes/patches)
-```bash
-oc project ${PROJECT_CPD_INST_OPERANDS}
-
-for i in $(oc api-resources | grep cpd.ibm.com | awk '{print $1}' | grep -v zenextensions); do
-  echo "************* $i *************"
-  for x in $(oc get $i --no-headers | awk '{print $1}'); do
-    echo "--------- $x ------------"
-    oc get $i $x -o jsonpath={.spec} | jq
-  done
-done
-```
-
 #### Basic Cluster Validation
 
 Check node, machineConfig, clusterOperators, clusterVersion
