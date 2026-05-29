@@ -977,6 +977,17 @@ Output should look like
 hotfix: 5.3.1.4
 ```
 
+Confirm the completion of the hotfix by check the Watsonx Orchestrate CR status
+```bash
+oc get wo
+```
+
+The expected output
+```bash
+NAME   VERSION   DEPLOYED   VERIFIED   TOTAL   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
+wo     5.3.1     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 9d
+```
+
 
 #### Upgrade Watsonx Ai
 
@@ -1354,6 +1365,8 @@ cpd-cli oadp install \
 ---
 
 ## Post Upgrade Validation
+
+[Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
 
 Check CR status
 ```bash
