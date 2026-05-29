@@ -336,30 +336,21 @@ oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_reso
 
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-upgrading-events-operator-1)
 
+#### Potential Issue #1 - Kafka controller/broker pods in OOMKilled 
+
 Before proceeding with the Events Operator upgrade, make sure the kafka controller and broker pods are healthy
 ```bash
-oc get po -n knative-eventing | grep -E 'controller|broker'
+oc get po -n knative-eventing | grep -E 'eventing-kafka-broker|eventing-kafka-controller'
 ```
 
 For example
 ```bash
-eventing-controller-5dc84c5499-rxlsn                         2/2     Running     0              16d
-eventing-controller-5dc84c5499-sx6lr                         2/2     Running     0              16d
-kafka-broker-dispatcher-0                                    2/2     Running     0              16d
-kafka-broker-receiver-847c6cb77f-dj2bw                       2/2     Running     0              16d
-kafka-controller-9b7c96ff7-d6glh                             2/2     Running     0              16d
-kafka-controller-9b7c96ff7-nwks8                             2/2     Running     0              16d
-kafka-controller-post-install-1.37.1-pj9mk                   0/1     Completed   0              16d
 knative-eventing-kafka-knative-eventing-kafka-broker-0       1/1     Running     0              16d
 knative-eventing-kafka-knative-eventing-kafka-broker-1       1/1     Running     0              16d
 knative-eventing-kafka-knative-eventing-kafka-broker-2       1/1     Running     0              16d
 knative-eventing-kafka-knative-eventing-kafka-controller-3   1/1     Running     0              16d
 knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running     0              16d
 knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0              16d
-mt-broker-filter-6f4f8bcf6-slz2n                             2/2     Running     0              16d
-mt-broker-filter-6f4f8bcf6-zvgvd                             2/2     Running     0              16d
-mt-broker-ingress-865d6d6b78-p5q86                           2/2     Running     0              16d
-mt-broker-ingress-865d6d6b78-pscc5                           2/2     Running     0              16d
 ```
 
 If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
@@ -408,6 +399,56 @@ cpd-cli manage deploy-events-operator \
 --release=${VERSION} \
 --events_operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --events_operand_ns=${PROJECT_CPD_INST_OPERANDS}
+```
+
+#### Potential Issue #2 - Kafka CR TLS Issue 
+
+After initiating the upgrade of IBM Events Operator, monitor the Events operator logs and kafka CR for any of the following types of messages
+```bash
+SSL handshake failed
+PKIX path validation failed
+Path does not chain with any of the trust anchors
+```
+
+The TLS issue is caused by an interrupted certificate reload 
+
+To address this, restart the Events operator pod followed by the controller pods and the broker pods
+
+**Note**: Make sure to restart the pods one at a time to avoid taking down the cluster all at once
+
+Identify and restart the Events operator pod
+```bash
+oc get po -n ups-wx-operators | grep events
+```
+
+Restart the Events operator pod
+```bash
+oc delete po ibm-events-cluster-operator-84bdb5dcf8-rsqlj -n ups-wx-operators
+```
+
+Identify the kafka broker and controller pods
+```bash
+oc get po -n knative-eventing | grep -E 'eventing-kafka-broker|eventing-kafka-controller'
+```
+
+You should see an output similar to this
+```bash
+knative-eventing-kafka-knative-eventing-kafka-broker-0       1/1     Running     0
+knative-eventing-kafka-knative-eventing-kafka-broker-1       1/1     Running     0
+knative-eventing-kafka-knative-eventing-kafka-broker-2       1/1     Running     0
+knative-eventing-kafka-knative-eventing-kafka-controller-3   1/1     Running     0
+knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running     0
+knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0
+```
+
+Restart the kafka controller pods one at a time, and ensure the pod goes back into running status before restarting the next pod
+```bash
+oc delete po <kafka-controller-pod-name> -n knative-eventing 
+```
+
+Restart the kafka broker pods one at a time, and ensure the pod goes back into running status before restarting the next pod
+```bash
+oc delete po <kafka-broker-pod-name> -n knative-eventing 
 ```
 
 #### Apply Entitlements
