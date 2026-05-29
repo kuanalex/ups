@@ -336,6 +336,46 @@ oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_reso
 
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-upgrading-events-operator-1)
 
+Before proceeding with the Events Operator upgrade, make sure the kafka controller and broker pods are healthy
+```bash
+oc get po -n knative-eventing | grep -E 'controller|broker'
+```
+
+For example
+```bash
+eventing-controller-5dc84c5499-rxlsn                         2/2     Running     0              16d
+eventing-controller-5dc84c5499-sx6lr                         2/2     Running     0              16d
+kafka-broker-dispatcher-0                                    2/2     Running     0              16d
+kafka-broker-receiver-847c6cb77f-dj2bw                       2/2     Running     0              16d
+kafka-controller-9b7c96ff7-d6glh                             2/2     Running     0              16d
+kafka-controller-9b7c96ff7-nwks8                             2/2     Running     0              16d
+kafka-controller-post-install-1.37.1-pj9mk                   0/1     Completed   0              16d
+knative-eventing-kafka-knative-eventing-kafka-broker-0       1/1     Running     0              16d
+knative-eventing-kafka-knative-eventing-kafka-broker-1       1/1     Running     0              16d
+knative-eventing-kafka-knative-eventing-kafka-broker-2       1/1     Running     0              16d
+knative-eventing-kafka-knative-eventing-kafka-controller-3   1/1     Running     0              16d
+knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running     0              16d
+knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0              16d
+mt-broker-filter-6f4f8bcf6-slz2n                             2/2     Running     0              16d
+mt-broker-filter-6f4f8bcf6-zvgvd                             2/2     Running     0              16d
+mt-broker-ingress-865d6d6b78-p5q86                           2/2     Running     0              16d
+mt-broker-ingress-865d6d6b78-pscc5                           2/2     Running     0              16d
+```
+
+If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
+
+For the broker KafkaNodePool
+```bash
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n cpd-instance --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
+```
+
+For the controller KafkaNodePool
+```bash
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n cpd-instance --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
+```
+
+Once these pods are stable, proceed with upgrading the Events operator, and continue to monitor for memory issues
+
 Log the cpd-cli in to the Red Hat OpenShift Container Platform cluster
 ```bash
 ${CPDM_OC_LOGIN}
