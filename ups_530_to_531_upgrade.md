@@ -1366,9 +1366,15 @@ cpd-cli oadp install \
 
 ## Post Upgrade Validation
 
-Follow these steps to enable WxO Observability
+#### Enable WxO Observability
+
+Follow the procedure in the following document to enable WxO Observability
 
 **IMPORTANT**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
+
+---
+
+#### General validation steps
 
 Check CR status
 ```bash
