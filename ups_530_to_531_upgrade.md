@@ -1293,6 +1293,21 @@ Set the INSTANCE_VERSION environment variable to the version that corresponds to
 export INSTANCE_VERSION=29.1.0
 ```
 
+Identify the caserviceinstance name
+```bash
+oc get caserviceinstance
+```
+
+Check the caserviceinstance-cr for hitfix_digests
+```bash
+oc patch caserviceinstance ca1770175442273745-cr -o yaml | grep -A 10 hotfix_digests
+```
+
+Remove any hotfix_digests in the caserviceinstances-cr with a patch command
+```bash
+oc patch caserviceinstance ca1770175442273745-cr -n ups-wx-operands --type=json -p=[{"op": "remove", "path": "/spec/hotfix_digests"}]
+```
+
 Upgrade the service instances
 ```bash
 cpd-cli service-instance upgrade \
@@ -1371,6 +1386,14 @@ cpd-cli oadp install \
 Follow the procedure in the following document to enable WxO Observability
 
 **IMPORTANT**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
+
+---
+
+#### Fix platform-auth-service pod in ContainerStatusUnknown
+
+Follow the procedure in the following known issue document to resolve platform-auth-service pod in ContainerStatusUnknown issue
+
+**IMPORTANT**: [Enabling the debug trace for the platform-auth-service cause pod in ContainerStatusUnknown state and repeatedly get evicted](https://www.ibm.com/mysupport/s/defect/aCIgJ000000C9qjWAC/dt467023?language=en_US)
 
 ---
 
