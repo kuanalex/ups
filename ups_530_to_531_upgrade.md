@@ -340,6 +340,8 @@ knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running    
 
 If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
 
+**Note**: Scale down the Data Governor operator in ups-wx-operators namespace, then proceed with the following steps
+
 For the broker KafkaNodePool
 ```bash
 oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
@@ -444,31 +446,26 @@ oc delete po <kafka-broker-pod-name> -n knative-eventing
 # Apply IBM Cloud Pak for Data Enterprise Edition entitlement
 cpd-cli manage apply-entitlement \
 --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=cpd-enterprise \
---production=false
+--entitlement=cpd-enterprise
 
 # Apply watsonx.ai license
 cpd-cli manage apply-entitlement \
 --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-ai \
---production=false
+--entitlement=watsonx-ai
 
 # Apply watsonx.governance licenses
 cpd-cli manage apply-entitlement \
 --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-gov-mm \
---production=false
+--entitlement=watsonx-gov-mm
 
 cpd-cli manage apply-entitlement \
 --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-gov-rc \
---production=false
+--entitlement=watsonx-gov-rc
 
 # Apply watsonx Orchestrate license
 cpd-cli manage apply-entitlement \
 --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-orchestrate \
---production=false
+--entitlement=watsonx-orchestrate
 
 # Apply Watson Speech licenses, skip for non prod
 # cpd-cli manage apply-entitlement \
