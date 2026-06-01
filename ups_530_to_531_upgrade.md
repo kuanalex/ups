@@ -1561,7 +1561,7 @@ Follow the procedure in the following document to enable WxO Observability
 
 ---
 
-#### Fix platform-auth-service pod in ContainerStatusUnknown
+#### Potential Issue #7 - Fix platform-auth-service pod in ContainerStatusUnknown
 
 Follow the procedure in the following known issue document to resolve platform-auth-service pod in ContainerStatusUnknown issue
 
