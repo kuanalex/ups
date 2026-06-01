@@ -644,7 +644,7 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-**Note**: During non-prod upgrade an issue was encountered during Watsonx Orchestrate upgrade with Watson Assistant
+#### Potential Issue #3 - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
 
 The ephemeralDeployment data type was updated from Boolean to String, and this required an edit on the wo-wa-data-governor-opensearch-ephemeral temporarypatch in this section
 ```bash
@@ -1072,6 +1072,97 @@ cpd-cli manage install-components \
 --image_pull_secret=${IMAGE_PULL_SECRET} \
 --upgrade=true
 ```
+
+#### Potential Issue #4 - OOMKilled on `install-and-reconsile` job
+
+During prod-east upgrade an issue was encountered with the 'install-and-reconsile' job during Watsonx AI upgrade
+
+The `wml-install-and-reconcile` job reached its backofflimit of 6 because all 6 job start ups failed due to OOMKilled
+
+This caused the `wml-cr` on the `wmlbases` resource to become stuck during the watsonX AI upgrade
+
+The `wml-cr` on the `wmlbases` resource would not move past this stuck state at 87.5% and `InProgress` status, since it was waiting for this job to complete
+
+Container information and log output can be found below
+```bash
+  Containers:
+   cleanup-hibernate:
+    Image:      us-docker.pkg.dev/gcp-dct-ccca-dev/ccca-d-image-registry/cp/cpd/wml-post-upgrade-cleanup-deployments@sha256:fa18900f8874755bc8c0cce9759384f5a5d5fa06a000c4d4ea8e01eec1d21f3c
+    Port:       <none>
+    Host Port:  <none>
+    Command:
+      /bin/sh
+      /opt/ibm/scripts/run_upgrade_or_rollback.sh
+    Limits:
+      cpu:                250m
+      ephemeral-storage:  200Mi
+      memory:             350Mi
+    Requests:
+      cpu:                250m
+      ephemeral-storage:  20Mi
+      memory:             350Mi
+```
+
+```bash
+Python version :3.11.13 (main, Jan 16 2026, 00:00:00) [GCC 11.5.0 20240719 (Red Hat 11.5.0-11)]
+2026/05/30 17:44:18,067|INFO|upgrade_or_rollback_deployments.py:133: Capturing pre-upgrade runtime details...
+2026/05/30 17:44:33,085|ERROR|upgrade_or_rollback_deployments.py:124:
+[COMMAND]: kubectl logs $(kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ups-wx-operands | grep runtime-assemblies-operator) -n ups-wx-operands | grep "icpdsupport/addOnId=wml"
+[ERROR]:
+```
+
+To resolve the issue, delete the job, restart the WML operator and injected new memory values into the Operator files using the following script during the startup of the reconcile
+```bash
+OP_NS=ups-wx-operators
+OP_LABEL='name=ibm-cpd-wml-operator'
+
+echo "Current operator pod:"
+OLD_POD=$(oc get pod -n "$OP_NS" -l "$OP_LABEL" -o jsonpath='{.items[0].metadata.name}')
+echo "$OLD_POD"
+
+echo "Deleting old operator pod..."
+oc delete pod "$OLD_POD" -n "$OP_NS"
+
+echo "Waiting for new operator pod..."
+while true; do
+  NEW_POD=$(oc get pod -n "$OP_NS" -l "$OP_LABEL" \
+    --field-selector=status.phase=Running \
+    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
+  if [ -n "$NEW_POD" ] && [ "$NEW_POD" != "$OLD_POD" ]; then
+    READY=$(oc get pod "$NEW_POD" -n "$OP_NS" -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
+    if [ "$READY" = "true" ]; then
+      echo "New operator pod is ready: $NEW_POD"
+      break
+    fi
+  fi
+
+  echo "Still waiting..."
+  sleep 5
+done
+
+echo "Patching WML job templates from 350Mi to 1Gi..."
+oc exec -n "$OP_NS" "$NEW_POD" -- sh -c '
+for f in \
+/opt/ansible/5.3.1/roles/wml-base/templates/install-reconsile-cleanup-and-hibernate.yaml.j2 \
+/opt/ansible/5.3.1/roles/wml-base/templates/post-upgrade-cleanup-and-hibernate.yaml.j2 \
+/opt/ansible/5.3.1/roles/wml-base/templates/pre-upgrade-check-job.yaml.j2 \
+/opt/ansible/5.3.1/roles/wml-base/templates/preinstall-wml-runtime-definitions.yaml.j2 \
+/opt/ansible/5.3.1/roles/wml-base/templates/wml-shutdown-restart-runtimes.yaml.j2
+do
+  echo "===== $f ====="
+  cp "$f" "$f.bak"
+  sed -i "s/memory: \"350Mi\"/memory: \"1Gi\"/g" "$f"
+  grep -n "memory:" "$f" | head -20
+done
+'
+
+echo "Done. Patched pod: $NEW_POD"
+```
+
+This loaded the higher memory into the job defention and allowed us to pass through the initial job
+
+Recommended that support needs to look into this with larger enviroments
 
 Monitor watsonx_ai upgrade
 ```bash
