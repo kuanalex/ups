@@ -1440,6 +1440,8 @@ cpd-cli service-instance upgrade \
 --profile=${CPD_PROFILE_NAME}
 ```
 
+---
+
 #### Upgrade Cognos Analytics service instances
 
 Set the INSTANCE_VERSION environment variable to the version that corresponds to the version of IBM Software Hub on your cluster
@@ -1470,6 +1472,22 @@ cpd-cli service-instance upgrade \
 --version=${INSTANCE_VERSION} \
 --all
 ```
+
+#### Potential Issue #5 - CAserviceinstance stuck trying to connect to dispatcher
+
+While upgrading Governance, in an effort to speed up the upgrade, we upgraded the service instance of CAserviceinstance to the newer version
+
+This appeared to put the ca-reporting service in a bad state
+
+Even though the new version appeared on the service instance, the dispatcher was still trying to connect to the old version
+
+This caused the old pods of the `reporting` pods to not come down and the new pods to not boot up properly
+
+To fix this issue, we had to delete the all the CA Pods (`smarts`, `reporting`, etc) and operator to re-create them
+
+This allowed the pods to come up properly, upgrade and report back healthy
+
+---
 
 #### Upgrade Openpages service instances
 
@@ -1535,7 +1553,7 @@ cpd-cli oadp install \
 
 ## Post Upgrade Validation
 
-#### Enable WxO Observability
+#### Potential Issue #6 - Enable WxO Observability
 
 Follow the procedure in the following document to enable WxO Observability
 
