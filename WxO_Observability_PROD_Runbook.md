@@ -24,6 +24,9 @@ cd <cpd-installation-directory>
 # Source the CPD environment variables
 source cpd_vars.sh
 
+# Update the active OpenShift project namespace to the operands namespace inside the olm-utils container
+podman exec -it olm-utils-play-v4 oc project $PROJECT_CPD_INST_OPERANDS
+
 # Verify environment is loaded
 echo "CPD Instance Namespace: ${CPD_INSTANCE_NS}"
 echo "CPD Operator Namespace: ${CPD_OPERATOR_NS}"
