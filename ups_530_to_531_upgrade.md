@@ -220,8 +220,8 @@ Based on the health check review, we've determined that some of these operators 
 | Operator | Current CSV | Target for 5.3.1 | Action |
 | --- | --- | --- | --- |
 | OpenShift Serverless | 1.37.1 | 1.37.x | No action required. |
-| OpenShift AI (RHOAI) | 2.21.1 | 2.25.1 | Upgrade required. |
-| NVIDIA GPU Operator | 25.3.3 | 26.3.x | Upgrade required. |
+| OpenShift AI (RHOAI) | 2.22.2 | 2.25.1 | Upgrade required. |
+| NVIDIA GPU Operator | 25.10.0 | 26.3.x | Upgrade required. |
 | Node Feature Discovery | 4.17.0 | 4.18.x | Upgrade required to match OCP/ODS version. |
 | IBM Events Operator | 5.2.1 | 6.0.0 | Upgrade required. |
 
