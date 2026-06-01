@@ -1456,12 +1456,12 @@ oc get caserviceinstance
 
 Check the caserviceinstance-cr for hitfix_digests
 ```bash
-oc patch caserviceinstance ca1770175442273745-cr -o yaml | grep -A 10 hotfix_digests
+oc patch caserviceinstance ca1770175400817403-cr -o yaml | grep -A 10 hotfix_digests
 ```
 
 Remove any hotfix_digests in the caserviceinstances-cr with a patch command
 ```bash
-oc patch caserviceinstance ca1770175442273745-cr -n ups-wx-operands --type=json -p=[{"op": "remove", "path": "/spec/hotfix_digests"}]
+oc patch caserviceinstance ca1770175400817403-cr -n ups-wx-operands --type=json -p=[{"op": "remove", "path": "/spec/hotfix_digests"}]
 ```
 
 Upgrade the service instances
