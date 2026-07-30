@@ -1,23 +1,23 @@
-# UPS Production Cluster CP4D 5.3.0 to 5.3.1 Upgrade
+# UPS Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
 
 ## Author: Alex Kuan (alex.kuan@ibm.com)
 
 **From:**
 ```
-CPD: 5.3.0
-OCP: 4.18.40
-Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
-Internet: airgap
+CPD: 5.3.1.0
+OCP: 4.20.17
+Storage: Google Cloud NetApp Volumes and Persistent Disk on Google Cloud
+Internet: air-gapped w/ internet access
 Private container registry: yes
 Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 **To:**
 ```
-CPD: 5.3.1
-OCP: 4.18.40
-Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
-Internet: airgap
+CPD: 5.4.0.5
+OCP: 4.20.17
+Storage: Google Cloud NetApp Volumes and Persistent Disk on Google Cloud
+Internet: air-gapped w/ internet access
 Private container registry: yes
 Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
@@ -43,7 +43,7 @@ Backup of the cluster is complete
 
 Backup your IBM Software Hub cluster before the upgrade
 
-Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=administering-backing-up-restoring-software-hub)
+Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=administering-backing-up-restoring-software-hub)
 
 **Note**: Some services don't support the offline OADP backup. Review the backup documentation and take the dedicated approach when necessary
 
@@ -51,41 +51,7 @@ The image mirroring completed successfully
 
 If a private container registry is in-use to host the IBM Software Hub software images, you must mirror the updated images from the IBM® Entitled Registry to the private container registry
 
-Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
-
-**Note**: Since the upgrade path is to 5.3.1.0 or 5.3.1 GA, we will need to ensure we specify --patch_id=0 in the following commands
-```bash
-case-download 
-list-images
-mirror-images
-list-patch
-apply-patch
-apply-cluster-components
-apply-scheduler
-apply-components
-install-components
-```
-
-Here is an example of the case-download syntax
-```bash
-cpd-cli manage case-download \
---components=${COMPONENTS} \
---release=${VERSION} \
---patch_id=0 \
---from_oci=true
-```
-
-Here is an example of the mirror-images syntax
-```bash
-cpd-cli manage mirror-images \
---components=${COMPONENTS} \
---groups=${IMAGE_GROUPS} \
---release=${VERSION} \
---patch_id=0 \
---target_registry=${PRIVATE_REGISTRY_LOCATION} \
---arch=${IMAGE_ARCH} \
---case_download=false
-```
+Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
 
 The permissions required for the upgrade is ready
 - OpenShift cluster administrator permissions
@@ -94,7 +60,6 @@ The permissions required for the upgrade is ready
 - Access to the bastion node for executing the upgrade commands
 
 A pre-upgrade health check is made to ensure the cluster's readiness for upgrade
-
 - The OpenShift cluster, persistent storage and IBM Software Hub platform and services are in healthy status
 
 ---
@@ -111,10 +76,10 @@ Ensure the following tools are installed and updated to the required versions:
 **Installation and Update Instructions:**
 
 For detailed instructions on installing or updating these tools, refer to:
-- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=53-updating-client-workstations)
-- [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-updating-software-hub-cli-1)
-- [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-updating-openshift-cli-1)
-- [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-installing-helm-cli-1)
+- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-updating-client-workstations)
+- [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-software-hub-cli-1)
+- [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-openshift-cli-1)
+- [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-installing-helm-cli-1)
 
 Access Requirements
 
@@ -128,7 +93,7 @@ Environment Variables Setup (cpd_vars.sh)
 
 Ensure your environment variables script is configured correctly
 
-**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cri-updating-your-environment-variables-script-1)
+**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script-1)
 
 Source your environment variables script and verify key variables are set
 ```bash
@@ -164,6 +129,11 @@ Restart the OLM utils container with updated environment
 cpd-cli manage restart-container
 ```
 
+Set your PATCH_ID variable to the target patch version (in this case 5.4.0 Patch 5)
+```bash
+export PATCH_ID=5
+``
+
 Verify container is running
 ```bash
 podman ps | grep olm-utils
@@ -196,28 +166,28 @@ oc label temporarypatch wa-store-assistant-limits type=critical-configuration
 
 #### Air Gapped Environment Prerequisites
 
-1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
-2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)** for all components
-3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
-4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
+1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
+2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-downloading-case-packages-2)** for all components
+3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
+4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
 
 #### Advanced Service Prerequisites
 
-Some services require additional prerequisite software upgrades. Review [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-upgrading-prerequisite-software-1) for details
+Some services require additional prerequisite software upgrades. Review [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-upgrading-prerequisite-software-1) for details
 
 **Multicloud Object Gateway (MCG)** - Required for: Watson Speech, Voice Gateway, Watsonx Ai
-[Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-multicloud-object-gateway-1) during storage or OCP upgrade
+[Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-multicloud-object-gateway-1) during storage or OCP upgrade
 
 **Red Hat OpenShift Serverless Knative** - Required for: Watsonx Orchestrate
-[Upgrade Knative](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing-1) to supported version
+[Upgrade Knative](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing-1) to supported version
 
-**GPU Operators** - [Upgrade if needed](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-operators-services-that-require-gpus-1) for GPU-enabled services
+**GPU Operators** - [Upgrade if needed](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-operators-services-that-require-gpus-1) for GPU-enabled services
 
-**Red Hat OpenShift AI** - [Review upgrade requirements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-ai-1) if using OpenShift AI
+**Red Hat OpenShift AI** - [Review upgrade requirements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-ai-1) if using OpenShift AI
 
 Based on the health check review, we've determined that some of these operators will need to be upgraded as follows
 
-| Operator | Current CSV | Target for 5.3.1 | Action |
+| Operator | Current CSV | Target for 5.4.0 | Action |
 | --- | --- | --- | --- |
 | OpenShift Serverless | 1.37.1 | 1.37.x | No action required. |
 | OpenShift AI (RHOAI) | 2.21.1 | 2.25.1 | Upgrade required. |
@@ -282,7 +252,7 @@ cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPE
 
 #### Upgrade IBM Licensing
 
-**Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.3.x?topic=upgrading-shared-cluster-components)
+**Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.4.x?topic=upgrading-shared-cluster-components)
 
 Upgrade IBM Licensing service
 ```bash
@@ -300,14 +270,14 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 #### Update Cluster-Scoped Resources for CPD Instance
 
-**Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
+**Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-updating-cluster-scoped-resources-instance-1)
 
 Generate cluster-scoped resource definitions for CPD instance
 ```bash
 cpd-cli manage case-download \
 --components=${COMPONENTS} \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --cluster_resources=true
 ```
@@ -319,7 +289,7 @@ oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_reso
 
 #### Upgrading the IBM Events Operator
 
-**Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-upgrading-events-operator-1)
+**Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator-1)
 
 #### Potential Issue #1 - Kafka controller/broker pods in OOMKilled 
 
@@ -363,7 +333,7 @@ Download case packages for ibm_events_operator
 ```bash
 cpd-cli manage case-download \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --components=ibm_events_operator \
 --from_oci=true
 ```
@@ -440,7 +410,7 @@ oc delete po <kafka-broker-pod-name> -n knative-eventing
 
 #### Apply Entitlements
 
-**Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
+**Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
 
 ```bash
 # Apply IBM Cloud Pak for Data Enterprise Edition entitlement
@@ -487,7 +457,7 @@ cpd-cli manage apply-entitlement \
 
 Creating image pull secrets for the instance  
 
-**Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-creating-image-pull-secrets-instance)
+**Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-creating-image-pull-secrets-instance)
 
 Log in to Red Hat® OpenShift® Container Platform as a user with sufficient permissions to complete the task
 ```bash
@@ -525,7 +495,7 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 
 ## Upgrade IBM Software Hub Platform and Services
 
-**Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
+**Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=upgrading)
 
 Remove the entire spec/image_digests from ZenService lite-cr before proceeding
 ```bash
@@ -538,7 +508,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=cpd_platform \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -579,7 +549,7 @@ Check that affected pods are running
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
-**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-upgrading-software-hub-1)
+**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-upgrading-software-hub-1)
 
 ---
 
@@ -635,7 +605,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watsonx_orchestrate \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -700,7 +670,7 @@ SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance.svc.cluster.local
 SERVER_INTERNAL_PORT=9045
 ```
 
-Download and edit the [migration script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-from-version-53-20#cli-upgrade__migration-script__title__1)
+Download and edit the [migration script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=u-upgrading-from-version-53-20#cli-upgrade__migration-script__title__1)
 ```bash
 # Edit the configuration section (lines 6-7)
 vi /tmp/atm_endpoint_tls_migration.sql
@@ -760,285 +730,12 @@ DROP TABLE IF EXISTS migration_log;
 "
 ```
 
-After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.3.1 Hotfix 4
+After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.4.0 Hotfix XYZ
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
 
-**Reference**: [Applying the watsonx Orchestrate 5.3.1 hotfix (Hotfix 4)
+**Reference**: [Applying the watsonx Orchestrate 5.4.0 hotfix (Hotfix 4)
 ](https://www.ibm.com/support/pages/applying-watsonx-orchestrate-531-hotfix-hotfix-4)
-
-Set the operator and operand namespaces
-```bash
-export PROJECT_CPD_INST_OPERATORS=ups-wx-operators
-export PROJECT_CPD_INST_OPERANDS=ups-wx-operands
-```
-
-**Note**: You will need to install Skopeo and mirror the operator and operand images before proceeding
-
-Create hotfix5314.sh 
-```bash
-vi hotfix5314.sh
-```
-
-With the following contents
-```bash
-#!/bin/bash
-# -----------------------------------------------------------------------------
-# watsonx Orchestrate 5.3.1 Hotfix
-# - Verifies watsonx Orchestrate version from .status.versionStatus.status.
-# - Images of Operators are replaced with the image from hotfix script.
-#   * HOTFIX_LABEL_VALUE for hotfix 3 is 5.3.1.4
-#   * If an existing label value matches x.x.x.x and is higher than HOTFIX_LABEL_VALUE,
-#     the script exits early after informing you
-# - Deletes a fixed set of Jobs in the operands namespace and waits for all to reappear with
-#   new UIDs and succeed
-# -----------------------------------------------------------------------------
-
-# -----------------------------
-# Helpers
-# -----------------------------
-ts() { date +"%Y-%m-%d %H:%M:%S"; }
-
-require() {
-  command -v "$1" >/dev/null 2>&1 || { echo "[$(ts)] Missing required command: $1"; exit 1; }
-}
-get_wo_version() {
-  ns="$1"
-  oc get wo -n "$ns" -o jsonpath='{.items[0].status.versionStatus.status}' 2>/dev/null || true
-}
-
-get_wo_cr_version() {
-  ns="$1"
-  oc get wo -n "$ns" -o jsonpath='{.items[0].spec.version}' 2>/dev/null || true
-}
-
-
-# -----------------------------
-# Patch operator deployment images
-# -----------------------------
-
-OPERATOR_IMAGES="icr.io/cpopen/ibm-watsonx-orchestrate-operator@sha256:5e75fea5876911150642c2701fd4a67f63cf3d43adfc3c78cdbd7e8ed94b952c
-icr.io/cpopen/ibm-wxo-component-operator@sha256:c8bcd00b379fd85db5861c966358b536cd2da89c002fe3b58035b7c46c1f270a"
-
-if [ -z "${PROJECT_CPD_INST_OPERATORS:-}" ]; then
-  echo "[ERROR] PROJECT_CPD_INST_OPERATORS is not set. Exiting."
-  exit 1
-fi
-
-# Required WO version
-REQUIRED_WO_VERSION="${REQUIRED_WO_VERSION:-5.3.1}"
-REQUIRED_WO_CR_VERSION="${REQUIRED_WO_CR_VERSION:-7.1.0}"
-
-# -----------------------------
-# Validations and version check
-# -----------------------------
-require oc
-
-# Make sure oc login is done
-if ! oc whoami &>/dev/null; then
-    echo "[$(ts)] Error: Not logged in to OpenShift"
-    exit 1
-fi
-
-echo "[$(ts)] Checking wo.status.versionStatus.status in ${PROJECT_CPD_INST_OPERANDS}"
-WO_VER="$(get_wo_version "$PROJECT_CPD_INST_OPERANDS")"
-WO_CR_VER="$(get_wo_cr_version "$PROJECT_CPD_INST_OPERANDS")"
-
-# Check if versions match required versions
-if [ "$WO_VER" != "$REQUIRED_WO_VERSION" ] || [ "$WO_CR_VER" != "$REQUIRED_WO_CR_VERSION" ]; then
-    echo "[$(ts)] Error: Version mismatch!"
-    echo "[$(ts)] WO Version: $WO_VER (required: $REQUIRED_WO_VERSION)"
-    echo "[$(ts)] WO CR Version: $WO_CR_VER (required: $REQUIRED_WO_CR_VERSION)"
-    exit 1
-else
-    echo "[$(ts)] Version check passed: $WO_VER , CR version: $WO_CR_VER"
-fi
-
-# Hotfix label configuration
-HOTFIX_LABEL_KEY="${HOTFIX_LABEL_KEY:-hotfix}"
-HOTFIX_LABEL_VALUE="${HOTFIX_LABEL_VALUE:-5.3.1.4}"
-WO_CR_NAME=wo
-
-is_semver4() {
-  v="$1"
-  printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'
-}
-
-# Backup dir for deployments
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLUSTER_NAME="$(oc whoami --show-console | sed 's/.*console-openshift-console\.apps\.\([^.]*\)\..*/\1/')"
-BACKUP_DIR="${SCRIPT_DIR}/wxo_deployment_backups/$CLUSTER_NAME"
-mkdir -p "$BACKUP_DIR"
-
-if [ -n "${OPERATOR_IMAGES:-}" ]; then
-  echo "[$(ts)] Updating operator deployment images in ${PROJECT_CPD_INST_OPERATORS}"
-
-  patched_deps=""
-
-  # Use a here-document to avoid subshell so patched_deps is preserved
-  while IFS= read -r img; do
-    [ -z "$img" ] && continue
-
-    # Extract base image name (e.g., ibm-wxo-component-operator)
-    base="$(basename "$img" | cut -d'@' -f1)"
-
-    echo "[$(ts)] Processing image: $img (base=$base)"
-
-    dep=""
-
-    case "$base" in
-      ibm-watsonx-orchestrate-operator)
-        dep="wo-operator"
-        ;;
-
-      ibm-wxo-component-operator)
-        dep="ibm-wxo-componentcontroller-manager"
-        ;;
-
-      *)
-        dep="$(oc -n "$PROJECT_CPD_INST_OPERATORS" get deploy --no-headers 2>/dev/null \
-               | grep "$base" | awk 'NR==1{print $1}')"
-        ;;
-    esac
-
-    # Skip bundle/catalog images if they ever slip in
-    if echo "$base" | grep -Eq 'bundle|catalog'; then
-      echo "[$(ts)]   Skipping $base (bundle/catalog image – not tied to deployment)"
-      continue
-    fi
-
-    if [ -z "$dep" ]; then
-      echo "[$(ts)]   WARNING: no matching deployment found for $base — skipping"
-      continue
-    fi
-
-    # -----------------------------
-    # Backup deployment YAML
-    # -----------------------------
-    backup_file="${BACKUP_DIR}/${dep}-$(date +%Y%m%d%H%M%S).yaml"
-    if oc -n "$PROJECT_CPD_INST_OPERATORS" get deploy "$dep" -o yaml > "$backup_file" 2>/dev/null; then
-      echo "[$(ts)]   Backed up deployment/$dep → $backup_file"
-    else
-      echo "[$(ts)]   WARNING: failed to back up deployment/$dep"
-    fi
-
-    # Determine container name (assume first container is operator)
-    cname="$(oc -n "$PROJECT_CPD_INST_OPERATORS" get deploy "$dep" \
-             -o jsonpath='{.spec.template.spec.containers[0].name}' 2>/dev/null)"
-
-    if [ -z "$cname" ]; then
-      echo "[$(ts)]   WARNING: cannot determine container name for $dep — skipping"
-      continue
-    fi
-
-    echo "[$(ts)]   Patching deployment/$dep container '$cname' → $img"
-
-    if oc -n "$PROJECT_CPD_INST_OPERATORS" set image "deployment/$dep" "$cname=$img" >/dev/null 2>&1; then
-      echo "[$(ts)]   ✓ Image updated for $dep"
-      patched_deps="$patched_deps $dep"
-    else
-      echo "[$(ts)]   ✗ ERROR: failed to patch $dep"
-    fi
-
-  done <<EOF
-$OPERATOR_IMAGES
-EOF
-
-# -----------------------------
-# Label WO CR with configurable label and value
-# -----------------------------
-if [ -n "$WO_CR_NAME" ]; then
-  current_label="$(oc -n "$PROJECT_CPD_INST_OPERANDS" get wo "$WO_CR_NAME" -o jsonpath="{.metadata.labels.${HOTFIX_LABEL_KEY}}" 2>/dev/null || true)"
-  if [ "$current_label" = "$HOTFIX_LABEL_VALUE" ]; then
-    echo "[$(ts)] WO CR ${WO_CR_NAME} already labeled ${HOTFIX_LABEL_KEY}=${HOTFIX_LABEL_VALUE}"
-  else
-    echo "[$(ts)] Setting label ${HOTFIX_LABEL_KEY}=${HOTFIX_LABEL_VALUE} on WO CR ${WO_CR_NAME} in ns ${PROJECT_CPD_INST_OPERANDS}"
-    oc -n "$PROJECT_CPD_INST_OPERANDS" label wo "$WO_CR_NAME" "${HOTFIX_LABEL_KEY}=${HOTFIX_LABEL_VALUE}" --overwrite >/dev/null 2>&1 || true
-    new_label="$(oc -n "$PROJECT_CPD_INST_OPERANDS" get wo "$WO_CR_NAME" -o jsonpath="{.metadata.labels.${HOTFIX_LABEL_KEY}}" 2>/dev/null || true)"
-    if [ "$new_label" = "$HOTFIX_LABEL_VALUE" ]; then
-      echo "[$(ts)] Label set: ${HOTFIX_LABEL_KEY}=${HOTFIX_LABEL_VALUE}"
-    else
-      echo "[$(ts)] WARNING: could not confirm ${HOTFIX_LABEL_KEY}=${HOTFIX_LABEL_VALUE} label was set"
-    fi
-  fi
-else
-  echo "[$(ts)] No WO CR found in ns ${PROJECT_CPD_INST_OPERANDS}, skipping label."
-fi
-
-
-  # -----------------------------
-  # Verify patched deployments are healthy (1/1 or 2/2)
-  # -----------------------------
-  if [ -n "${patched_deps// /}" ]; then
-    echo "[$(ts)] Verifying rollout status for patched deployments..."
-
-    for dep in $patched_deps; do
-      echo "[$(ts)] Checking deployment/$dep..."
-
-      # Wait for rollout to complete
-      if oc -n "$PROJECT_CPD_INST_OPERATORS" rollout status deploy/"$dep" --timeout=300s; then
-        # Check Ready/Desired replica ratio
-        ratio="$(oc -n "$PROJECT_CPD_INST_OPERATORS" get deploy "$dep" \
-                 -o jsonpath='{.status.readyReplicas}/{.status.replicas}' 2>/dev/null || echo '0/0')"
-        echo "[$(ts)]   Ready/Desired: $ratio"
-
-        if [ "$ratio" = "1/1" ] || [ "$ratio" = "2/2" ]; then
-          echo "[$(ts)]   ✓ Deployment $dep is healthy (pods up and running)."
-        else
-          echo "[$(ts)]   ⚠ WARNING: Deployment $dep is not at 1/1 or 2/2; current $ratio"
-        fi
-      else
-        echo "[$(ts)]   ✗ ERROR: rollout status for deployment/$dep did not complete successfully."
-      fi
-    done
-  else
-    echo "[$(ts)] No deployments were patched; skipping health verification."
-  fi
-
-else
-  echo "[$(ts)] No OPERATOR_IMAGES specified — skipping operator image patch."
-fi
-
-# Let's delete the redis cronjob and and allow the operator to create a new equivalent one. 
-oc delete cronjob wo-watson-orchestrate-redis-cronjob --ignore-not-found
-
-# -----------------------------
-# Final message
-# -----------------------------
-echo "------------------------------------------------------------------"
-echo "[$(ts)] 5.3.1 Hotfix4 steps completed."
-echo "Backups saved under ${BACKUP_DIR}"
-echo "Monitor the watsonx Orchestrate CR status by running:"
-echo " oc get wo -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -E 'watsonxOrchestrateStatus|${HOTFIX_LABEL_KEY}'"
-echo "Ensure the watsonx Orchestrate CR status is 'Completed' and label ${HOTFIX_LABEL_KEY}=${HOTFIX_LABEL_VALUE} is present."
-echo "It will take another 15–20 minutes for the updated components to be applied and restarted."
-echo "------------------------------------------------------------------"
-```
-
-Make the script executable
-```bash
-chmod 775 hotfix5314.sh
-```
- 
-Run the script
-```bash
-nohup sh hotfix5314.sh &
-```
- 
-Watch progress
-```bash
-tail -f nohup.out
-```
-
-Verify CR status and label
-```bash
-oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep hotfix
-```
-
-Output should look like
-```bash
-hotfix: 5.3.1.4
-```
 
 Confirm the completion of the hotfix by check the Watsonx Orchestrate CR status
 ```bash
@@ -1048,7 +745,7 @@ oc get wo
 The expected output
 ```bash
 NAME   VERSION   DEPLOYED   VERIFIED   TOTAL   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
-wo     5.3.1     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 9d
+wo     5.4.0     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 9d
 ```
 
 
@@ -1065,7 +762,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=${XAI_COMPONENT_TYPE} \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1144,11 +841,11 @@ done
 echo "Patching WML job templates from 350Mi to 1Gi..."
 oc exec -n "$OP_NS" "$NEW_POD" -- sh -c '
 for f in \
-/opt/ansible/5.3.1/roles/wml-base/templates/install-reconsile-cleanup-and-hibernate.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/post-upgrade-cleanup-and-hibernate.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/pre-upgrade-check-job.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/preinstall-wml-runtime-definitions.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/wml-shutdown-restart-runtimes.yaml.j2
+/opt/ansible/5.4.0/roles/wml-base/templates/install-reconsile-cleanup-and-hibernate.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/post-upgrade-cleanup-and-hibernate.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/pre-upgrade-check-job.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/preinstall-wml-runtime-definitions.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/wml-shutdown-restart-runtimes.yaml.j2
 do
   echo "===== $f ====="
   cp "$f" "$f.bak"
@@ -1196,7 +893,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watsonx_governance \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1351,7 +1048,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=db2oltp \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1371,7 +1068,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=cognos_analytics \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1400,7 +1097,7 @@ Prerequisites
    - `manage_service_instances` (Manage service instances)
 3. Set the `CPD_PROFILE_NAME` environment variable
 
-**Documentation**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cli-creating-cpd-profile)
+**Documentation**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cli-creating-cpd-profile)
 
 ---
 
@@ -1527,7 +1224,7 @@ Repeat the preceding steps to upgrade each service instance associated with this
 
 You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
-**Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-updating-cpdbr-service-1)
+**Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-updating-cpdbr-service-1)
 
 For Environments Without Scheduling Service
 ```bash
@@ -1545,9 +1242,9 @@ cpd-cli oadp install \
 
 **Note**: This upgrade should be performed after all services have been upgraded
 
-**Note2**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.3.1.x in the air-gapped registry instead of the mirrored 5.3.1 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
+**Note2**: If you encounter an ImagePullBackOff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.4.0.x in the air-gapped registry instead of the mirrored 5.4.0 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
 
-**Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.3.1.5 tag
+**Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.4.0.5 tag
 
 ---
 
@@ -1592,12 +1289,12 @@ oc get route cpd -o yaml
 ```
 
 ## Troubleshooting References
-- [Known issues for watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonx-orchestrate)
-- [Known issues and limitations for Common core services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-common-core-services)
-- [Known issues and limitations for IBM watsonx.ai](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonxai)
-- [Known issues and limitations for watsonx.governance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonxgovernance)
-- [Known issues and limitations for Watson Speech services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watson-speech-services)
-- [Known issues and limitations for Db2 and Db2 Warehouse](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-db2-db2-warehouse)
-- [Known issues and limitations in Cognos Analytics](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-cognos-analytics)
+- [Known issues for watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-watsonx-orchestrate)
+- [Known issues and limitations for Common core services](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-common-core-services)
+- [Known issues and limitations for IBM watsonx.ai](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-watsonxai)
+- [Known issues and limitations for watsonx.governance](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-watsonxgovernance)
+- [Known issues and limitations for Watson Speech services](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-watson-speech-services)
+- [Known issues and limitations for Db2 and Db2 Warehouse](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-db2-db2-warehouse)
+- [Known issues and limitations in Cognos Analytics](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=issues-cognos-analytics)
 
 **End of Runbook**
