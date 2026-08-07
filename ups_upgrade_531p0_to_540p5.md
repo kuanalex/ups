@@ -3,8 +3,6 @@
 ## Upgrade Context
 - **OCP:** 4.20.23
 - **SWH:** 5.3.1 → 5.4.0
-- **FileStorageClass:** ocs-storagecluster-cephfs
-- **BlockStorageClass:** ocs-storagecluster-ceph-rbd
 - **Components:** cpd_platform, watsonx_orchestrate, watsonx_ai, watsonx_governance, watson_speech, voice_gateway, db2oltp, cognos_analytics
 - **PrivateImageRegistry:** Yes
 
