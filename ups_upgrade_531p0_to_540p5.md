@@ -41,8 +41,6 @@ oc get scheduling -A
   
   An OpenShift cluster administrator can complete all of the installation tasks.
   
-  However, if you want to enable users with fewer permissions to complete some of the installation tasks, refer to the IBM Documentation about `Reauthorizing an instance administrator with the minimum RBAC to upgrade components`.
-
 - **IBM Software Hub permissions**
   
   The Cloud Pak for Data administrator role or permissions is required for upgrading the service instances.
@@ -56,14 +54,6 @@ oc get scheduling -A
 ### 5. A pre-upgrade health check is made to ensure the cluster's readiness for upgrade
 
 - The OpenShift cluster, persistent storage, IBM Software Hub platform and services are in healthy status.
-
-### 6. Migrating to Red Hat OpenShift certificate manager
-
-The IBM Certificate manager is deprecated.
-
-If the IBM Certificate manager (ibm-cert-manager) is installed on your cluster, refer to IBM Documentation to migrate your certificates from the IBM Certificate manager to the Red Hat OpenShift certificate manager (cert-manager Operator).
-
-[Migrating from the IBM Certificate manager to the Red Hat OpenShift certificate manager](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=upgrading-migrating-red-hat-openshift-certificate-manager)
 
 
 
@@ -80,21 +70,21 @@ source ./cpd_vars.sh
 
 ### Checking the health of your cluster
 
+Login to the cluster
 ```bash
-${OC_LOGIN}
-oc get nodes,co,mcp
-
-${CPDM_OC_LOGIN}
-cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
-cpd-cli health cluster
-cpd-cli health nodes
-cpd-cli health operators --operator_ns=${PROJECT_CPD_INST_OPERATORS} --control_plane_ns=${PROJECT_CPD_INST_OPERANDS}
-cpd-cli health operands --control_plane_ns=${PROJECT_CPD_INST_OPERANDS}
+${OC_LOGIN} && ${CPDM_OC_LOGIN}
 ```
 
-### Checking the known issues before the upgrade
+Check service cr status
+```bash
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+```
 
-- [Known issues and limitations for IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=overview-known-issues-limitations)
+Check for unhealthy pods
+```bash
+oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
+```
+
 
 ## Updating the IBM Software Hub command-line interface
 
