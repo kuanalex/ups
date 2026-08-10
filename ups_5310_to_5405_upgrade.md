@@ -45,13 +45,13 @@ Backup your IBM Software Hub cluster before the upgrade
 Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=administering-backing-up-restoring-software-hub)
 
 The latest olm-utils-v4 image is available
-Reference: [Obtaining the olm-utils-v4 image before running IBM Software Hub installation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-obtaining-olm-utils-v4-image-1)
+Reference: [Obtaining the olm-utils-v4 image before running IBM Software Hub installation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-obtaining-olm-utils-v4-image)
 
 Case packages are downloaded on the workstation
-Reference: [Downloading CASE packages before running IBM Software Hub upgrade](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-downloading-case-packages-1)
+Reference: [Downloading CASE packages before running IBM Software Hub upgrade](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-downloading-case-packages)
 
 The image mirroring completed successfully
-Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
+Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry)
 
 Here is an example of the case-download syntax
 ```bash
@@ -114,7 +114,7 @@ Environment Variables Setup (cpd_vars.sh)
 
 Ensure your environment variables script is configured correctly
 
-**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cri-updating-your-environment-variables-script-1)
+**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
 
 Source your environment variables script and verify key variables are set
 ```bash
@@ -183,17 +183,17 @@ oc label temporarypatch wa-store-assistant-limits type=critical-configuration
 
 #### Advanced Service Prerequisites
 
-Some services require additional prerequisite software upgrades. Review [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pyc-upgrading-prerequisite-software-1) for details
+Some services require additional prerequisite software upgrades. Review [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-upgrading-prerequisite-software) for details
 
 **Multicloud Object Gateway (MCG)** - Required for: Watson Speech, Voice Gateway, Watsonx Ai
-[Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-multicloud-object-gateway-1) during storage or OCP upgrade
+[Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-multicloud-object-gateway) during storage or OCP upgrade
 
 **Red Hat OpenShift Serverless Knative** - Required for: Watsonx Orchestrate
-[Upgrade Knative](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing-1) to supported version
+[Upgrade Knative](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing) to supported version
 
-**GPU Operators** - [Upgrade if needed](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-operators-services-that-require-gpus-1) for GPU-enabled services
+**GPU Operators** - [Upgrade if needed](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-operators-services-that-require-gpus) for GPU-enabled services
 
-**Red Hat OpenShift AI** - [Review upgrade requirements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ups-upgrading-red-hat-openshift-ai-1) if using OpenShift AI
+**Red Hat OpenShift AI** - [Review upgrade requirements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-ai) if using OpenShift AI
 
 Based on the health check review, we've determined that some of these operators will need to be upgraded as follows
 
@@ -262,7 +262,7 @@ cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPE
 
 #### Upgrade IBM Licensing
 
-**Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.3.x?topic=upgrading-shared-cluster-components)
+**Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.4.x?topic=upgrading-shared-cluster-components)
 
 Upgrade IBM Licensing service
 ```bash
@@ -280,7 +280,7 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 #### Update Cluster-Scoped Resources for CPD Instance
 
-**Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-updating-cluster-scoped-resources-instance-1)
+**Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-updating-cluster-scoped-resources-instance)
 
 Generate cluster-scoped resource definitions for CPD instance
 ```bash
@@ -299,7 +299,7 @@ oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_reso
 
 #### Upgrading the IBM Events Operator
 
-**Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=puish-upgrading-events-operator-1)
+**Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator)
 
 #### Potential Issue #1 - Kafka controller/broker pods in OOMKilled 
 
@@ -420,7 +420,7 @@ oc delete po <kafka-broker-pod-name> -n knative-eventing
 
 #### Apply Entitlements
 
-**Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
+**Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
 
 ```bash
 # Apply IBM Cloud Pak for Data Enterprise Edition entitlement
@@ -467,7 +467,7 @@ cpd-cli manage apply-entitlement \
 
 Creating image pull secrets for the instance  
 
-**Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-creating-image-pull-secrets-instance)
+**Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-creating-image-pull-secrets-instance)
 
 Log in to Red Hat® OpenShift® Container Platform as a user with sufficient permissions to complete the task
 ```bash
@@ -505,7 +505,7 @@ oc create secret docker-registry ${IMAGE_PULL_SECRET} \
 
 ## Upgrade IBM Software Hub Platform and Services
 
-**Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=upgrading)
+**Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=upgrading)
 
 Remove the entire spec/image_digests from ZenService lite-cr before proceeding
 ```bash
@@ -559,7 +559,7 @@ Check that affected pods are running
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
-**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-upgrading-software-hub-1)
+**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-upgrading-software-hub)
 
 ---
 
@@ -680,7 +680,7 @@ SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance.svc.cluster.local
 SERVER_INTERNAL_PORT=9045
 ```
 
-Download and edit the [migration script](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=u-upgrading-from-version-53-20#cli-upgrade__migration-script__title__1)
+Download and edit the [migration script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=u-upgrading-from-version-53-20#cli-upgrade__migration-script__title__1)
 ```bash
 # Edit the configuration section (lines 6-7)
 vi /tmp/atm_endpoint_tls_migration.sql
@@ -1380,7 +1380,7 @@ Prerequisites
    - `manage_service_instances` (Manage service instances)
 3. Set the `CPD_PROFILE_NAME` environment variable
 
-**Documentation**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=cli-creating-cpd-profile)
+**Documentation**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cli-creating-cpd-profile)
 
 ---
 
@@ -1507,7 +1507,7 @@ Repeat the preceding steps to upgrade each service instance associated with this
 
 You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
-**Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=uish-updating-cpdbr-service-1)
+**Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-updating-cpdbr-service)
 
 For Environments Without Scheduling Service
 ```bash
@@ -1570,14 +1570,5 @@ Validate 'expose:external-regional' label in the cpd route, add the label "expos
 ```bash
 oc get route cpd -o yaml
 ```
-
-## Troubleshooting References
-- [Known issues for watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonx-orchestrate)
-- [Known issues and limitations for Common core services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-common-core-services)
-- [Known issues and limitations for IBM watsonx.ai](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonxai)
-- [Known issues and limitations for watsonx.governance](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watsonxgovernance)
-- [Known issues and limitations for Watson Speech services](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-watson-speech-services)
-- [Known issues and limitations for Db2 and Db2 Warehouse](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-db2-db2-warehouse)
-- [Known issues and limitations in Cognos Analytics](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=issues-cognos-analytics)
 
 **End of Runbook**
