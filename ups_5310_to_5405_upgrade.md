@@ -409,45 +409,36 @@ oc delete po <kafka-broker-pod-name> -n knative-eventing
 
 **Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
 
+Apply the non-prod license for IBM Software Hub
 ```bash
-# Apply IBM Cloud Pak for Data Enterprise Edition entitlement
-cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=cpd-enterprise
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cpd-enterprise --production=false
+```
 
-# Apply watsonx.ai license
-cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-ai
+Apply watsonx.ai non-prod license
+```bash
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}  --entitlement=watsonx-ai --production=false
+```
 
-# Apply watsonx.governance licenses
-cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-gov-mm
+Apply watsonx.governance non prod licenses
+```bash
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-mm --production=false
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-rc --production=false
+```
 
-cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-gov-rc
+Apply watsonx Orchestrate non prod license
+```bash
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-orchestrate
+```
 
-# Apply watsonx Orchestrate license
-cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=watsonx-orchestrate
+Apply Watson Speech licenses, skip for non prod*
+```bash
+#cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=speech-to-text
+#cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=text-to-speech
+```
 
-# Apply Watson Speech licenses, skip for non prod
-# cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=speech-to-text
-
-# Skip for non prod
-# cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=text-to-speech
-
-# Apply Cognos Analytics license, skip for non prod
-cpd-cli manage apply-entitlement \
---cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---entitlement=cognos-analytics
+Apply Cognos Analytics license, skip for non prod*
+```bash
+#cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cognos-analytics
 ```
 
 ---
@@ -456,7 +447,7 @@ Creating image pull secrets for the instance
 
 **Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-creating-image-pull-secrets-instance)
 
-Log in to Red Hat® OpenShift® Container Platform as a user with sufficient permissions to complete the task
+Log in to the cluster
 ```bash
 ${OC_LOGIN}
 ```
@@ -476,16 +467,12 @@ EOF
 
 Create the image pull secret in the operators project for the instance
 ```bash
-oc create secret docker-registry ${IMAGE_PULL_SECRET} \
---from-file ".dockerconfigjson=dockerconfig.json" \
---namespace=${PROJECT_CPD_INST_OPERATORS}
+oc create secret docker-registry ${IMAGE_PULL_SECRET} --from-file ".dockerconfigjson=dockerconfig.json" --namespace=${PROJECT_CPD_INST_OPERATORS}
 ```
 
 Create the image pull secret in the operands project for the instance
 ```bash
-oc create secret docker-registry ${IMAGE_PULL_SECRET} \
---from-file ".dockerconfigjson=dockerconfig.json" \
---namespace=${PROJECT_CPD_INST_OPERANDS}
+oc create secret docker-registry ${IMAGE_PULL_SECRET} --from-file ".dockerconfigjson=dockerconfig.json" --namespace=${PROJECT_CPD_INST_OPERANDS}
 ```
 
 ---
@@ -1471,9 +1458,7 @@ export INSTANCE_NAME=<instance-name>
 
 Run the following command to check whether your OpenPages service instances is in running state
 ```bash
-cpd-cli service-instance status ${INSTANCE_NAME} \ 
---profile=${CPD_PROFILE_NAME} \ 
---service-type=openpages
+cpd-cli service-instance status ${INSTANCE_NAME} --profile=${CPD_PROFILE_NAME} --service-type=openpages
 ```
 
 Upgrade the service instance
@@ -1489,7 +1474,7 @@ Repeat the preceding steps to upgrade each service instance associated with this
 
 ---
 
-## Upgrade Cpdbr Service
+## Upgrade cpdbr service
 
 You must upgrade the cpdbr service after you upgrade IBM Software Hub.
 
