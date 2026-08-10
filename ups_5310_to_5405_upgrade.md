@@ -90,17 +90,17 @@ A pre-upgrade health check is made to ensure the cluster's readiness for upgrade
 Required Tools
 
 Ensure the following tools are installed and updated to the required versions:
-- **IBM Software Hub CLI**: Version 14.4.0.3
-- **OpenShift CLI (oc)**: Compatible version for your cluster
-- **Helm CLI**: Version 4.1.4
+- IBM Software Hub CLI: Version 14.4.0.3
+- OpenShift CLI (oc): Compatible version for your cluster
+- Helm CLI: Version 4.1.4
 
 **Installation and Update Instructions:**
 
 For detailed instructions on installing or updating these tools, refer to:
-- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-updating-client-workstations-1)
-- [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-software-hub-cli-1)
-- [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-openshift-cli-1)
-- [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-installing-helm-cli-1)
+- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-updating-client-workstations)
+- [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-software-hub-cli)
+- [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-openshift-cli)
+- [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-installing-helm-cli)
 
 Access Requirements
 
@@ -180,12 +180,6 @@ For example
 oc label temporarypatch wa-store-assistant-limits type=critical-configuration
 ```
 
-#### Air Gapped Environment Prerequisites
-
-1. **[Obtain OLM Utils v4 image](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-obtaining-olm-utils-v4-image-2)**
-2. **[Download CASE packages](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=pruirn-downloading-case-packages-2)** for all components
-3. **Mirror images** to private registry ([direct](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-2) or [intermediary](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-using-intermediary-container-registry-2))
-4. **[Pull OLM Utils](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=prufpcr-pulling-olm-utils-v4-image-from-private-container-registry-2)** from private registry
 
 #### Advanced Service Prerequisites
 
