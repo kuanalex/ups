@@ -209,19 +209,6 @@ Based on the health check review, we've determined that some of these operators 
 
 ## Pre Upgrade Health Check
 
-#### Run Comprehensive Health Check
-
-Run CPD health check (includes cluster, nodes, operands, operators)
-```bash
-cpd-cli health runcommand \
---commands=cluster,nodes,operands,operators \
---control_plane_ns="${PROJECT_CPD_INST_OPERANDS}" \
---operator_ns="${PROJECT_CPD_INST_OPERATORS}" \
---log-level=debug \
---verbose \
---save
-```
-
 #### Basic Cluster Validation
 
 Check node, machineConfig, clusterOperators, clusterVersion
@@ -244,14 +231,14 @@ Check CR status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
 
-Check for pods not running correctly (excludes completed jobs)
+Check for pods not in Completed status
 ```bash
 oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 ```
 
 List service instances
 ```bash
-cpd-cli manage list-deployed-components --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
 
 **Note: Fix any pod issues and ensure the service CRs are in Completed status before proceeding with the upgrade**
@@ -268,7 +255,7 @@ Upgrade IBM Licensing service
 ```bash
 cpd-cli manage apply-cluster-components \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --license_acceptance=true \
 --licensing_ns=${PROJECT_LICENSE_SERVICE}
 ```
@@ -287,14 +274,14 @@ Generate cluster-scoped resource definitions for CPD instance
 cpd-cli manage case-download \
 --components=${COMPONENTS} \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --cluster_resources=true
 ```
 
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
-oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
 ```
 
 #### Upgrading the IBM Events Operator
@@ -343,7 +330,7 @@ Download case packages for ibm_events_operator
 ```bash
 cpd-cli manage case-download \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --components=ibm_events_operator \
 --from_oci=true
 ```
@@ -357,7 +344,7 @@ cpd-cli manage deploy-events-operator \
 
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
-oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
 ```
 
 Run the following command to upgrade the IBM Events Operator
@@ -518,7 +505,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=cpd_platform \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -615,7 +602,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watsonx_orchestrate \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -740,12 +727,11 @@ DROP TABLE IF EXISTS migration_log;
 "
 ```
 
-After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.3.1 Hotfix 4
+After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.4.0.5 Hot fix 1
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
 
-**Reference**: [Applying the watsonx Orchestrate 5.3.1 hotfix (Hotfix 4)
-](https://www.ibm.com/support/pages/applying-watsonx-orchestrate-531-hotfix-hotfix-4)
+**Reference**: [Applying the watsonx Orchestrate 5.4.0 hot fix 1](https://www.ibm.com/support/pages/node/7247038)
 
 Set the operator and operand namespaces
 ```bash
@@ -755,19 +741,19 @@ export PROJECT_CPD_INST_OPERANDS=ups-wx-operands
 
 **Note**: You will need to install Skopeo and mirror the operator and operand images before proceeding
 
-Create hotfix5314.sh 
+Create hotfix5405.sh 
 ```bash
-vi hotfix5314.sh
+vi hotfix5405.sh
 ```
 
 With the following contents
 ```bash
 #!/bin/bash
 # -----------------------------------------------------------------------------
-# watsonx Orchestrate 5.3.1 Hotfix
+# watsonx Orchestrate 5.4.0.5 hot fix
 # - Verifies watsonx Orchestrate version from .status.versionStatus.status.
-# - Images of Operators are replaced with the image from hotfix script.
-#   * HOTFIX_LABEL_VALUE for hotfix 3 is 5.3.1.4
+# - Images of Operators are replaced with the image from hot fix script.
+#   * HOTFIX_LABEL_VALUE for hot fix 1 is 5.4.0.5
 #   * If an existing label value matches x.x.x.x and is higher than HOTFIX_LABEL_VALUE,
 #     the script exits early after informing you
 # - Deletes a fixed set of Jobs in the operands namespace and waits for all to reappear with
@@ -986,7 +972,7 @@ oc delete cronjob wo-watson-orchestrate-redis-cronjob --ignore-not-found
 # Final message
 # -----------------------------
 echo "------------------------------------------------------------------"
-echo "[$(ts)] 5.3.1 Hotfix4 steps completed."
+echo "[$(ts)] 5.4.0 Hotfix4 steps completed."
 echo "Backups saved under ${BACKUP_DIR}"
 echo "Monitor the watsonx Orchestrate CR status by running:"
 echo " oc get wo -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -E 'watsonxOrchestrateStatus|${HOTFIX_LABEL_KEY}'"
@@ -1017,7 +1003,7 @@ oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep hotfix
 
 Output should look like
 ```bash
-hotfix: 5.3.1.4
+hotfix: 5.4.0.4
 ```
 
 Confirm the completion of the hotfix by check the Watsonx Orchestrate CR status
@@ -1028,7 +1014,7 @@ oc get wo
 The expected output
 ```bash
 NAME   VERSION   DEPLOYED   VERIFIED   TOTAL   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
-wo     5.3.1     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 9d
+wo     5.4.0     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 9d
 ```
 
 
@@ -1045,7 +1031,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=${XAI_COMPONENT_TYPE} \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1124,11 +1110,11 @@ done
 echo "Patching WML job templates from 350Mi to 1Gi..."
 oc exec -n "$OP_NS" "$NEW_POD" -- sh -c '
 for f in \
-/opt/ansible/5.3.1/roles/wml-base/templates/install-reconsile-cleanup-and-hibernate.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/post-upgrade-cleanup-and-hibernate.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/pre-upgrade-check-job.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/preinstall-wml-runtime-definitions.yaml.j2 \
-/opt/ansible/5.3.1/roles/wml-base/templates/wml-shutdown-restart-runtimes.yaml.j2
+/opt/ansible/5.4.0/roles/wml-base/templates/install-reconsile-cleanup-and-hibernate.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/post-upgrade-cleanup-and-hibernate.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/pre-upgrade-check-job.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/preinstall-wml-runtime-definitions.yaml.j2 \
+/opt/ansible/5.4.0/roles/wml-base/templates/wml-shutdown-restart-runtimes.yaml.j2
 do
   echo "===== $f ====="
   cp "$f" "$f.bak"
@@ -1176,7 +1162,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=watsonx_governance \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1311,7 +1297,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=voice_gateway \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1331,7 +1317,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=db2oltp \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1351,7 +1337,7 @@ cpd-cli manage install-components \
 --license_acceptance=true \
 --components=cognos_analytics \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --operator_ns=${PROJECT_CPD_INST_OPERATORS} \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
@@ -1525,9 +1511,9 @@ cpd-cli oadp install \
 
 **Note**: This upgrade should be performed after all services have been upgraded
 
-**Note2**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.3.1.x in the air-gapped registry instead of the mirrored 5.3.1 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
+**Note2**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.4.0.x in the air-gapped registry instead of the mirrored 5.4.0 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
 
-**Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.3.1.5 tag
+**Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.4.0.5 tag
 
 ---
 
