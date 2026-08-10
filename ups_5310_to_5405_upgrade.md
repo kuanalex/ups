@@ -1,4 +1,4 @@
-# UPS Production Cluster CP4D 5.3.0 to 5.3.1 Upgrade
+# UPS Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
 
 ## Author: Alex Kuan (alex.kuan@ibm.com)
 
@@ -42,29 +42,16 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 Backup of the cluster is complete
 
 Backup your IBM Software Hub cluster before the upgrade
+Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=administering-backing-up-restoring-software-hub)
 
-Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=administering-backing-up-restoring-software-hub)
+The latest olm-utils-v4 image is available
+Reference: [Obtaining the olm-utils-v4 image before running IBM Software Hub installation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-obtaining-olm-utils-v4-image-1)
 
-**Note**: Some services don't support the offline OADP backup. Review the backup documentation and take the dedicated approach when necessary
+Case packages are downloaded on the workstation
+Reference: [Downloading CASE packages before running IBM Software Hub upgrade](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-downloading-case-packages-1)
 
 The image mirroring completed successfully
-
-If a private container registry is in-use to host the IBM Software Hub software images, you must mirror the updated images from the IBM® Entitled Registry to the private container registry
-
-Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
-
-**Note**: Since the upgrade path is to 5.3.1.0 or 5.3.1 GA, we will need to ensure we specify --patch_id=0 in the following commands
-```bash
-case-download 
-list-images
-mirror-images
-list-patch
-apply-patch
-apply-cluster-components
-apply-scheduler
-apply-components
-install-components
-```
+Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry-1)
 
 Here is an example of the case-download syntax
 ```bash
@@ -79,9 +66,8 @@ Here is an example of the mirror-images syntax
 ```bash
 cpd-cli manage mirror-images \
 --components=${COMPONENTS} \
---groups=${IMAGE_GROUPS} \
 --release=${VERSION} \
---patch_id=0 \
+--patch_id=${PATCH_ID} \
 --target_registry=${PRIVATE_REGISTRY_LOCATION} \
 --arch=${IMAGE_ARCH} \
 --case_download=false
@@ -104,17 +90,17 @@ A pre-upgrade health check is made to ensure the cluster's readiness for upgrade
 Required Tools
 
 Ensure the following tools are installed and updated to the required versions:
-- **IBM Software Hub CLI**: Version 14.3.1.5
+- **IBM Software Hub CLI**: Version 14.4.0.3
 - **OpenShift CLI (oc)**: Compatible version for your cluster
 - **Helm CLI**: Version 4.1.4
 
 **Installation and Update Instructions:**
 
 For detailed instructions on installing or updating these tools, refer to:
-- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=53-updating-client-workstations)
-- [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-updating-software-hub-cli-1)
-- [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-updating-openshift-cli-1)
-- [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.3.x?topic=ucw-installing-helm-cli-1)
+- [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-updating-client-workstations-1)
+- [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-software-hub-cli-1)
+- [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-openshift-cli-1)
+- [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-installing-helm-cli-1)
 
 Access Requirements
 
