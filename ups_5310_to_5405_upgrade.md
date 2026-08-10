@@ -4,8 +4,8 @@
 
 **From:**
 ```
-CPD: 5.3.0
-OCP: 4.18.40
+CPD: 5.3.1.0
+OCP: 4.20.xx
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
@@ -14,8 +14,8 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 
 **To:**
 ```
-CPD: 5.3.1
-OCP: 4.18.40
+CPD: 5.4.0.5
+OCP: 4.20.xx
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
