@@ -110,8 +110,6 @@ Access Requirements
 - Access to IBM Container Registry (cp.icr.io)
 - Access to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
-Environment Variables Setup (cpd_vars.sh)
-
 Ensure your environment variables script is configured correctly
 
 **Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
@@ -129,30 +127,15 @@ echo "Components: ${COMPONENTS}"
 echo "Private Registry: ${PRIVATE_REGISTRY_LOCATION}"
 ```
 
-Login using cpd-cli
+Login to the cluster
 ```bash
-${CPDM_OC_LOGIN}
+${OC_LOGIN} && ${CPDM_OC_LOGIN}
 ```
 
-Or login using oc directly
-```bash
-${OC_LOGIN}
-```
 
-Verify cluster access
+Verify nodes, machine config, cluster operators
 ```bash
-oc whoami
-oc get nodes
-```
-
-Restart the OLM utils container with updated environment
-```bash
-cpd-cli manage restart-container
-```
-
-Verify container is running
-```bash
-podman ps | grep olm-utils
+oc get nodes,mcp,co
 ```
 
 Take a backup of the routes
@@ -197,7 +180,7 @@ Some services require additional prerequisite software upgrades. Review [IBM Doc
 
 Based on the health check review, we've determined that some of these operators will need to be upgraded as follows
 
-| Operator | Current CSV | Target for 5.3.1 | Action |
+| Operator | Current CSV | Target for 5.4.0 | Action |
 | --- | --- | --- | --- |
 | OpenShift Serverless | 1.37.1 | 1.37.x | No action required. |
 | OpenShift AI (RHOAI) | 2.21.1 | 2.25.1 | Upgrade required. |
