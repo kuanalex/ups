@@ -5,7 +5,7 @@
 **From:**
 ```
 CPD: 5.3.1.0
-OCP: 4.20.xx
+OCP: 4.20.25
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
@@ -15,7 +15,7 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 **To:**
 ```
 CPD: 5.4.0.5
-OCP: 4.20.xx
+OCP: 4.20.25
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: airgap
 Private container registry: yes
@@ -41,35 +41,30 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 Backup of the cluster is complete
 
 Backup your IBM Software Hub cluster before the upgrade
-Reference: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=administering-backing-up-restoring-software-hub)
+**Reference**: [Backing up and restoring IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=administering-backing-up-restoring-software-hub)
 
 The latest olm-utils-v4 image is available
-Reference: [Obtaining the olm-utils-v4 image before running IBM Software Hub installation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-obtaining-olm-utils-v4-image)
+**Reference**: [Obtaining the olm-utils-v4 image before running IBM Software Hub installation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-obtaining-olm-utils-v4-image)
 
 Case packages are downloaded on the workstation
-Reference: [Downloading CASE packages before running IBM Software Hub upgrade](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-downloading-case-packages)
+**Reference**: [Downloading CASE packages before running IBM Software Hub upgrade](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pruirn-downloading-case-packages)
 
 The image mirroring completed successfully
-Reference: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry)
+**Reference**: [Mirroring images to private image registry](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=mipcr-mirroring-images-directly-private-container-registry)
 
 Here is an example of the case-download syntax
 ```bash
-cpd-cli manage case-download \
---components=${COMPONENTS} \
---release=${VERSION} \
---patch_id=0 \
---from_oci=true
+cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=0 --from_oci=true
+```
+
+Remember to download the CASE package for the ibm_events_operator component
+```bash
+cpd-cli manage case-download --components=ibm_events_operator --release=${VERSION} --patch_id=${PATCH_ID} --from_oci=true
 ```
 
 Here is an example of the mirror-images syntax
 ```bash
-cpd-cli manage mirror-images \
---components=${COMPONENTS} \
---release=${VERSION} \
---patch_id=${PATCH_ID} \
---target_registry=${PRIVATE_REGISTRY_LOCATION} \
---arch=${IMAGE_ARCH} \
---case_download=false
+cpd-cli manage mirror-images --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --target_registry=${PRIVATE_REGISTRY_LOCATION} --arch=${IMAGE_ARCH} --case_download=false
 ```
 
 The permissions required for the upgrade is ready
@@ -115,17 +110,15 @@ Ensure your environment variables script is configured correctly
 
 **Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
 
-Source your environment variables script and verify key variables are set
+Source your environment variables script
 ```bash
 source cpd_vars.sh
-echo "CPD Version: ${VERSION}"
-echo "OCP URL: ${OCP_URL}"
-echo "Operators Namespace: ${PROJECT_CPD_INST_OPERATORS}"
-echo "Operands Namespace: ${PROJECT_CPD_INST_OPERANDS}"
-echo "Block Storage: ${STG_CLASS_BLOCK}"
-echo "File Storage: ${STG_CLASS_FILE}"
-echo "Components: ${COMPONENTS}"
-echo "Private Registry: ${PRIVATE_REGISTRY_LOCATION}"
+```
+
+Set version and patch_id
+```bash
+export VERSION=5.4.0
+export PATCH_ID=5
 ```
 
 Login to the cluster
@@ -150,17 +143,17 @@ oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_b
 
 List all of the temporary patches in the operands namespace
 ```bash
-oc get temporarypatch -n ${PROJECT_CPD_INST_OPERANDS}
+oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
 For all patches that you want to retain, use the following command:
 ```bash
-oc label temporarypatch <patch_name> type=critical-configuration
+oc label TemporaryPatch <patch_name> type=critical-configuration
 ```
 
 For example
 ```bash
-oc label temporarypatch wa-store-assistant-limits type=critical-configuration
+oc label TemporaryPatch wa-store-assistant-limits type=critical-configuration
 ```
 
 ---
@@ -170,13 +163,9 @@ oc label temporarypatch wa-store-assistant-limits type=critical-configuration
 Some services require additional prerequisite software upgrades
  
 **Reference**: [Upgrading prerequisite software](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-upgrading-prerequisite-software)
-
 **Reference**: [Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-multicloud-object-gateway)
-
 **Reference**: [Upgrading Red Hat OpenShift Serverless Knative Eventing](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing)
-
 **Reference**: [Upgrading Operators For Services That Require GPU](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-operators-services-that-require-gpus)
-
 **Reference**: [Upgrading Red Hat OpenShift AI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-ai)
 
 Based on the health check review, no action should be required for these steps
@@ -237,11 +226,7 @@ cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 
 Upgrade IBM Licensing service
 ```bash
-cpd-cli manage apply-cluster-components \
---release=${VERSION} \
---patch_id=${PATCH_ID} \
---license_acceptance=true \
---licensing_ns=${PROJECT_LICENSE_SERVICE}
+cpd-cli manage apply-cluster-components --release=${VERSION} --patch_id=${PATCH_ID} --license_acceptance=true --licensing_ns=${PROJECT_LICENSE_SERVICE}
 ```
 
 Verify licensing pods are running
@@ -257,12 +242,7 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 Generate cluster-scoped resource definitions for CPD instance
 ```bash
-cpd-cli manage case-download \
---components=${COMPONENTS} \
---release=${VERSION} \
---patch_id=${PATCH_ID} \
---operator_ns=${PROJECT_CPD_INST_OPERATORS} \
---cluster_resources=true
+cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --cluster_resources=true
 ```
 
 Run the 'oc apply -f' command returned in the terminal, for example
@@ -270,64 +250,25 @@ Run the 'oc apply -f' command returned in the terminal, for example
 oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
 ```
 
+---
+
 #### Upgrading the IBM Events Operator
 
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator)
 
----
-
-#### Potential Issue #1 - Kafka controller/broker pods in OOMKilled 
-
-Before proceeding with the Events Operator upgrade, make sure the kafka controller and broker pods are healthy
-```bash
-oc get po -n knative-eventing | grep -E 'eventing-kafka-broker|eventing-kafka-controller'
-```
-
-For example
-```bash
-knative-eventing-kafka-knative-eventing-kafka-broker-0       1/1     Running     0              16d
-knative-eventing-kafka-knative-eventing-kafka-broker-1       1/1     Running     0              16d
-knative-eventing-kafka-knative-eventing-kafka-broker-2       1/1     Running     0              16d
-knative-eventing-kafka-knative-eventing-kafka-controller-3   1/1     Running     0              16d
-knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running     0              16d
-knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0              16d
-```
-
-If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
-
-**Note**: Scale down the Data Governor operator in ups-wx-operators namespace, then proceed with the following steps
-
-For the broker KafkaNodePool
-```bash
-oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
-```
-
-For the controller KafkaNodePool
-```bash
-oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
-```
-
-Once these pods are stable, proceed with upgrading the Events operator, and continue to monitor for memory issues
-
-Log the cpd-cli in to the Red Hat OpenShift Container Platform cluster
+Login to the cluster
 ```bash
 ${CPDM_OC_LOGIN}
 ```
 
 Download case packages for ibm_events_operator
 ```bash
-cpd-cli manage case-download \
---release=${VERSION} \
---patch_id=${PATCH_ID} \
---components=ibm_events_operator \
---from_oci=true
+cpd-cli manage case-download --release=${VERSION} --patch_id=${PATCH_ID} --components=ibm_events_operator --from_oci=true
 ```
 
-Generate cluster-scoped resource definitions for CPD instance
+Generate cluster-scoped resource definitions for the IBM Events Operator
 ```bash
-cpd-cli manage deploy-events-operator \
---release=${VERSION} \
---cluster_resources=true
+cpd-cli manage deploy-events-operator --release=${VERSION} --cluster_resources=true
 ```
 
 Run the 'oc apply -f' command returned in the terminal, for example
@@ -335,64 +276,14 @@ Run the 'oc apply -f' command returned in the terminal, for example
 oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
 ```
 
+Upgrade the Red Hat OpenShift Serverless Knative Eventing software
+```bash
+cpd-cli manage deploy-knative-eventing --release=${VERSION} --block_storage_class=${STG_CLASS_BLOCK} --upgrade=true
+```
+
 Run the following command to upgrade the IBM Events Operator
 ```bash
-cpd-cli manage deploy-events-operator \
---release=${VERSION} \
---events_operator_ns=${PROJECT_CPD_INST_OPERATORS} \
---events_operand_ns=${PROJECT_CPD_INST_OPERANDS}
-```
-
----
-
-#### Potential Issue #2 - Kafka CR TLS Issue 
-
-After initiating the upgrade of IBM Events Operator, monitor the Events operator logs and kafka CR for any of the following types of messages
-```bash
-SSL handshake failed
-PKIX path validation failed
-Path does not chain with any of the trust anchors
-```
-
-The TLS issue is caused by an interrupted certificate reload 
-
-To address this, restart the Events operator pod followed by the controller pods and the broker pods
-
-**Note**: Make sure to restart the pods one at a time to avoid taking down the cluster all at once
-
-Identify and restart the Events operator pod
-```bash
-oc get po -n ups-wx-operators | grep events
-```
-
-Restart the Events operator pod
-```bash
-oc delete po ibm-events-cluster-operator-84bdb5dcf8-rsqlj -n ups-wx-operators
-```
-
-Identify the kafka broker and controller pods
-```bash
-oc get po -n knative-eventing | grep -E 'eventing-kafka-broker|eventing-kafka-controller'
-```
-
-You should see an output similar to this
-```bash
-knative-eventing-kafka-knative-eventing-kafka-broker-0       1/1     Running     0
-knative-eventing-kafka-knative-eventing-kafka-broker-1       1/1     Running     0
-knative-eventing-kafka-knative-eventing-kafka-broker-2       1/1     Running     0
-knative-eventing-kafka-knative-eventing-kafka-controller-3   1/1     Running     0
-knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running     0
-knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0
-```
-
-Restart the kafka controller pods one at a time, and ensure the pod goes back into running status before restarting the next pod
-```bash
-oc delete po <kafka-controller-pod-name> -n knative-eventing 
-```
-
-Restart the kafka broker pods one at a time, and ensure the pod goes back into running status before restarting the next pod
-```bash
-oc delete po <kafka-broker-pod-name> -n knative-eventing 
+cpd-cli manage deploy-events-operator --release=${VERSION} --events_operator_ns=${PROJECT_CPD_INST_OPERATORS} --events_operand_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
 
 ---
@@ -400,6 +291,11 @@ oc delete po <kafka-broker-pod-name> -n knative-eventing
 #### Apply Entitlements
 
 **Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
+
+Login to the cluster
+```bash
+${CPDM_OC_LOGIN}
+```
 
 Apply the non-prod license for IBM Software Hub
 ```bash
@@ -435,50 +331,14 @@ Apply Cognos Analytics license, skip for non prod*
 
 ---
 
-#### Creating image pull secrets for the instance  
-
-**Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-creating-image-pull-secrets-instance)
-
-Log in to the cluster
-```bash
-${OC_LOGIN}
-```
-
-Create a file named dockerconfig.json based on where your cluster pulls images from
-```bash
-cat <<EOF > dockerconfig.json 
-{
-  "auths": {
-    "${PRIVATE_REGISTRY_LOCATION}": {
-      "auth": "${IMAGE_PULL_CREDENTIALS}"
-    }
-  }
-}
-EOF
-```
-
-Create the image pull secret in the operators project for the instance
-```bash
-oc create secret docker-registry ${IMAGE_PULL_SECRET} --from-file ".dockerconfigjson=dockerconfig.json" --namespace=${PROJECT_CPD_INST_OPERATORS}
-```
-
-Create the image pull secret in the operands project for the instance
-```bash
-oc create secret docker-registry ${IMAGE_PULL_SECRET} --from-file ".dockerconfigjson=dockerconfig.json" --namespace=${PROJECT_CPD_INST_OPERANDS}
-```
-
----
-
 ## Upgrade IBM Software Hub Platform and Services
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=upgrading)
 
-Remove the entire spec/image_digests from ZenService lite-cr before proceeding
+Login to the cluster
 ```bash
-oc patch zenservice lite-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
+${CPDM_OC_LOGIN}
 ```
-
----
 
 #### Upgrade CPD platform using install-components
 ```bash
@@ -514,6 +374,8 @@ oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.
 
 #### Reapply RSI Patches
 
+**Reference**: [Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-upgrading-software-hub)
+
 If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
 ```bash
 cpd-cli manage apply-rsi-patches --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
@@ -528,8 +390,6 @@ Check that affected pods are running
 ```bash
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ```
-
-**Reference**: [IBM Documentation - Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-upgrading-software-hub)
 
 ---
 
@@ -558,23 +418,9 @@ non_olm:
 
 **IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests
 
-Remove the image_digests section from Watsonxaiifm 
+Remove the image_digests section from watsonxaiifm-cr
 ```bash
 oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
-```
-
-In the WatsonxOrchestrate CR, there are two image digestOverrides which will need to be removed
-```bash
-spec:
-    image:
-      digestOverrides:
-        wxo-server-conversation_controller: sha256:e481eae84d5a412b25ebc4b6e982face5899503b839f69c7f7cae6c05df424de
-        wxo-server-server: sha256:d75246e301a1e4bd62fae7f90af32ace1344c50b5e5c710b1a5e4873e0cdbd24
-```
-
-Remove the digestOverrides section from WatsonxOrchestrate manually or by using the following patch command, which should remove the /spec/image/digestOverrides section of the yaml
-```bash
-oc patch watsonxorchestrate wo -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image/digestOverrides"}]'
 ```
 
 Upgrade watsonx_orchestrate
@@ -594,7 +440,7 @@ cpd-cli manage install-components \
 
 ---
 
-#### Potential Issue #3 - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
+#### Potential Issue - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
 
 The ephemeralDeployment data type was updated from Boolean to String, and this required an edit on the wo-wa-data-governor-opensearch-ephemeral temporarypatch in this section
 ```bash
@@ -613,10 +459,7 @@ spec:
 
 Update the ephemeralDeployment value to a string
 ```bash
-oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral \
-  -n ups-wx-operands \
-  --type=merge \
-  -p '{"spec":{"patch":{"data-governor":{"datagovernoroverride":{"spec":{"dependencies":{"opensearch":{"ephemeralDeployment":"true"}}}}}}}}'
+oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral -n ups-wx-operands --type=merge -p '{"spec":{"patch":{"data-governor":{"datagovernoroverride":{"spec":{"dependencies":{"opensearch":{"ephemeralDeployment":"true"}}}}}}}}'
 ```
 
 Validate the patch updates
@@ -629,88 +472,11 @@ Monitor watsonx_orchestrate upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_orchestrate
 ```
 
-Post upgrade tasks for Watsonx Orchestrate
+---
 
-Login to Red Hat OpenShift cluster
-```bash
-$OC_LOGIN
-```
+#### Post upgrade tasks for Watsonx Orchestrate
 
-Extract the current ATM server configuration from the Kubernetes secret
-```bash
-kubectl get secret wo-agentic-task-manager-server-env \
-  -n ${PROJECT_CPD_INST_OPERANDS} \
--o jsonpath='{.data.\.secret\.env}' | base64 --decode | grep SERVER_INTERNAL
-```
-
-Important: Store the value of SERVER_INTERNAL_HOSTNAME for later use, ensure that the value for SERVER_INTERNAL_PROTOCOL is set to https and SERVER_INTERNAL_PORT is set to 9045
-```bash
-SERVER_INTERNAL_PROTOCOL=https
-SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance.svc.cluster.local
-SERVER_INTERNAL_PORT=9045
-```
-
-Download and edit the [migration script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=u-upgrading-from-version-53-20#cli-upgrade__migration-script__title__1)
-```bash
-# Edit the configuration section (lines 6-7)
-vi /tmp/atm_endpoint_tls_migration.sql
-```
-
-Update the configuration values to match your environment by using the following commands
-```bash
-SET atm_migration.old_url = 'http://<SERVER_INTERNAL_HOSTNAME>:9044';
-SET atm_migration.new_url = 'https://<SERVER_INTERNAL_HOSTNAME>:9045';
-```
-
-Example configuration:
-```
-SET atm_migration.old_url = 'http://wo-agentic-task-manager.cpd-instance.svc.cluster.local:9044';
-SET atm_migration.new_url = 'https://wo-agentic-task-manager.cpd-instance.svc.cluster.local:9045';
-```
-
-To run the migration script on PostgreSQL database
-```bash
-POD_NAME=$(oc get pods -l "k8s.enterprisedb.io/instanceName=wo-watson-orchestrate-postgresedb-1" -o jsonpath='{.items[0].metadata.name}')
-DATABASE_NAME="archer"
-
-oc exec -i $POD_NAME -- psql -U postgres -d $DATABASE_NAME < /tmp/atm_endpoint_tls_migration.sql
-```
-
-Run the following verification queries to validate the migration status
-```bash
-oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
-SELECT COUNT(*) as remaining_tools FROM tools 
-WHERE binding::text LIKE '%wo-agentic-task-manager%' 
-AND binding::text LIKE '%:9044%'; 
-SELECT COUNT(*) as remaining_tool_versions FROM tool_version 
-WHERE binding::text LIKE '%wo-agentic-task-manager%' 
-AND binding::text LIKE '%:9044%';"
-```
-
-Expected results
-```bash
-- `remaining_tools`: 0
-- `remaining_tool_versions`: 0
-```
-
-To clean up the migration log, run the following commands
-```bash
-oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
--- Verify migration log entry
-SELECT * FROM migration_log
-WHERE migration_name = 'atm_endpoint_tls_migration_5_3_1';
-"
-```
-
-Drop the migration_log table only after successful verification.
-```bash
-oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
--- Drop the migration_log table 
-DROP TABLE IF EXISTS migration_log;
-"
-```
-
-After completing this migration, follow the steps to apply IBM watsonx Orchestrate release 5.4.0.5 Hot fix 1
+After completing this migration, follow the steps to apply the latest IBM watsonx Orchestrate release 5.4.0.5 Hot fix
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
 
@@ -966,12 +732,12 @@ echo "------------------------------------------------------------------"
 
 Make the script executable
 ```bash
-chmod 775 hotfix5314.sh
+chmod 775 hotfix5405.sh
 ```
  
 Run the script
 ```bash
-nohup sh hotfix5314.sh &
+nohup sh hotfix5405.sh &
 ```
  
 Watch progress
@@ -986,7 +752,7 @@ oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep hotfix
 
 Output should look like
 ```bash
-hotfix: 5.4.0.4
+hotfix: 5.4.0.5
 ```
 
 Confirm the completion of the hotfix by check the Watsonx Orchestrate CR status
@@ -1025,7 +791,7 @@ cpd-cli manage install-components \
 
 ---
 
-#### Potential Issue #4 - OOMKilled on `install-and-reconsile` job
+#### Potential Issue  - OOMKilled on `install-and-reconcile` job
 
 During prod-east upgrade an issue was encountered with the 'install-and-reconsile' job during Watsonx AI upgrade
 
@@ -1169,24 +935,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Watson Speech
 
-Before proceeding with the upgrade, save your current Watson Speech custom resource
-```bash
-oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > watson-speech-cr-backup.yaml
-```
-
-**Important Note:** During the upgrade process, any custom configurations in the Watson Speech custom resource that are not managed by the cpd-cli (Helm) upgrade process may be lost
-
-After the upgrade completes, review your saved custom resource backup (`watson-speech-cr-backup.yaml`) and manually re-apply any custom configurations that were not preserved
-
-Leave out the `watsonSpeech` section in the values.yaml to preserve your custom resource spec during the upgrade. Example install-options.yaml file
-```yaml
-non_olm:
-  global:
-    blockStorageClass: <ocs-storagecluster-ceph-rbd>
-    fileStorageClass: <ocs-storagecluster-cephfs>
-```
-
-Example cpd-cli install-components upgrade command
+Upgrade watson speech
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1197,88 +946,17 @@ cpd-cli manage install-components \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
 --image_pull_secret=${IMAGE_PULL_SECRET} \
---param-file=/tmp/work/install-options.yml \
 --upgrade=true
 ```
 
 Monitor watson_speech upgrade, wait until the status shows `Completed` or `Ready`.
 ```bash
-oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -w
+oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
 Check the cr status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
-```
-
-After the upgrade completes, compare your current custom resource with the backup you created earlier
-
-View the backup
-```bash
-cat watson-speech-cr-backup.yaml
-```
-
-View the current CR
-```bash
-oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
-```
-
-If any custom configurations were lost during the upgrade (such as custom resource request/limits/replicas, GW HPA, or other manual modifications), re-apply them by editing the custom resource
-```bash
-oc edit WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
-```
-
-After the upgrade completes, apply the image overrides to use the new chuck runtime images and updated models
-```bash
-oc edit WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
-```
-
-Add or update the following sections under `spec`
-```yaml
-spec:
-  images:
-    am_patcher_chuck:
-      digest: sha256:2a24058a667b1f9026d49bda2e0ddee8f0f88f4e9760eaf35961c854525eb718
-    stt_runtime_chuck:
-      digest: sha256:2a24058a667b1f9026d49bda2e0ddee8f0f88f4e9760eaf35961c854525eb718
-    tts_runtime_chuck:
-      digest: sha256:2a24058a667b1f9026d49bda2e0ddee8f0f88f4e9760eaf35961c854525eb718
-  global:
-    genericModels:
-      image: generic-models@sha256:2dbbc1f1f8a9860765a60ba27ea181761196f776044b10388001befaf3b0046e
-    sttModels:
-      deDe:
-        digest: sha256:17eeb6230026792e6cb9471ab4cb48fae34cef6202539ecefd30bc5e0f080e6c
-        enabled: true
-      frFrTelephonyLSM:
-        digest: sha256:35b79279ecb9d695a5c8c69e5bd8e172e040e87f4ed8702cdd5090f84be39fa4
-        enabled: true
-      nlNlTelephony:
-        digest: sha256:940c93833760e802044b6c16e83d83696d21a464c56f723dfe68ba4d9986abc3
-        enabled: true
-```
-
-**Note:** Only include the models you want to enable. Set `enabled: true` for models you wish to use
-
-Save and exit the editor
-
-The Speech operator will reconcile the changes and update the deployments
-
-After applying the image overrides, the Speech operator will reconcile the custom resource and update the components
-
-Monitor the Speech operator reconciliation
-```bash
-oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} -w
-```
-
-Check that the new models are being uploaded. A new `speech-cr-stt-models` job will spawn to upload the updated models to object storage
-```bash
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -w | grep speech-cr-stt-models
-```
-
-After the models are uploaded, verify that the new STT/TTS runtime pods are rolled out with newer chuck image
-```bash
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -w | grep -E "speech-cr-(stt|tts)-runtime"
 ```
 
 ---
@@ -1354,15 +1032,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 After upgrading service CRs, some services require additional instance upgrades
 
-Prerequisites
-
-1. Complete all CR upgrades successfully
-2. Create a CPD profile with these permissions:
-   - `can_provision` (Create service instances)
-   - `manage_service_instances` (Manage service instances)
-3. Set the `CPD_PROFILE_NAME` environment variable
-
-**Documentation**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cli-creating-cpd-profile)
+**Reference**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cli-creating-cpd-profile)
 
 ---
 
@@ -1377,9 +1047,7 @@ cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 
 Get the list of Db2 service instances
 ```bash
-cpd-cli service-instance list \
---service-type=db2oltp \
---profile=${CPD_PROFILE_NAME}
+cpd-cli service-instance list --service-type=db2oltp --profile=${CPD_PROFILE_NAME}
 ```
 
 Export the db2oltp instance name
@@ -1387,19 +1055,14 @@ Export the db2oltp instance name
 export INSTANCE_NAME=<instance-name>
 ```
 
-Run the following command to check whether your Db2 service instances is in running state:
+Run the following command to check whether your Db2 service instances is in running state
 ```bash
-cpd-cli service-instance status ${INSTANCE_NAME} \
---profile=${CPD_PROFILE_NAME} \
---service-type=db2oltp
+cpd-cli service-instance status ${INSTANCE_NAME} --profile=${CPD_PROFILE_NAME} --service-type=db2oltp
 ```
 
 Upgrade the service instance
 ```bash
-cpd-cli service-instance upgrade \
---service-type=db2oltp \
---instance-name=${INSTANCE_NAME} \
---profile=${CPD_PROFILE_NAME}
+cpd-cli service-instance upgrade --service-type=db2oltp --instance-name=${INSTANCE_NAME} --profile=${CPD_PROFILE_NAME}
 ```
 
 ---
@@ -1408,34 +1071,15 @@ cpd-cli service-instance upgrade \
 
 Set the INSTANCE_VERSION environment variable to the version that corresponds to the version of IBM Software Hub on your cluster
 ```bash
-export INSTANCE_VERSION=29.1.0
-```
-
-Identify the caserviceinstance name
-```bash
-oc get caserviceinstance
-```
-
-Check the caserviceinstance-cr for hitfix_digests
-```bash
-oc patch caserviceinstance ca1770175400817403-cr -o yaml | grep -A 10 hotfix_digests
-```
-
-Remove any hotfix_digests in the caserviceinstances-cr with a patch command
-```bash
-oc patch caserviceinstance ca1770175400817403-cr -n ups-wx-operands --type=json -p=[{"op": "remove", "path": "/spec/hotfix_digests"}]
+export INSTANCE_VERSION=30.0.0
 ```
 
 Upgrade the service instances
 ```bash
-cpd-cli service-instance upgrade \
---service-type=cognos-analytics-app \
---profile=${CPD_PROFILE_NAME} \
---version=${INSTANCE_VERSION} \
---all
+cpd-cli service-instance upgrade --service-type=cognos-analytics-app --profile=${CPD_PROFILE_NAME} --version=${INSTANCE_VERSION} --all
 ```
 
-#### Potential Issue #5 - CAserviceinstance stuck trying to connect to dispatcher
+#### Potential Issue - CAserviceinstance stuck trying to connect to dispatcher
 
 While upgrading Governance, in an effort to speed up the upgrade, we upgraded the service instance of CAserviceinstance to the newer version
 
@@ -1455,9 +1099,7 @@ This allowed the pods to come up properly, upgrade and report back healthy
 
 Get the list of OpenPages service instances
 ```bash
-cpd-cli service-instance list \
---service-type=openpages \
---profile=${CPD_PROFILE_NAME}
+cpd-cli service-instance list --service-type=openpages --profile=${CPD_PROFILE_NAME}
 ```
 
 Set the INSTANCE_NAME environment variable to the name of the service instance that you want to upgrade
@@ -1472,11 +1114,7 @@ cpd-cli service-instance status ${INSTANCE_NAME} --profile=${CPD_PROFILE_NAME} -
 
 Upgrade the service instance
 ```bash
-cpd-cli service-instance upgrade \
---service-type=openpages \
---instance-name=${INSTANCE_NAME} \
---force-version-upgrade=true \
---profile=${CPD_PROFILE_NAME}
+cpd-cli service-instance upgrade --service-type=openpages --instance-name=${INSTANCE_NAME} --force-version-upgrade=true --profile=${CPD_PROFILE_NAME}
 ```
 
 Repeat the preceding steps to upgrade each service instance associated with this instance of IBM Software Hub
@@ -1507,13 +1145,13 @@ cpd-cli oadp install \
 
 **Note**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.4.0.x in the air-gapped registry instead of the mirrored 5.4.0 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
 
-**Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.4.0.5 tag
+**Note**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.4.0.5 tag
 
 ---
 
 ## Post Upgrade Validation
 
-#### Potential Issue #6 - Enable WxO Observability
+#### Potential Issue - Enable WxO Observability
 
 Follow the procedure in the following document to enable WxO Observability
 
@@ -1521,7 +1159,7 @@ Follow the procedure in the following document to enable WxO Observability
 
 ---
 
-#### Potential Issue #7 - Fix platform-auth-service pod in ContainerStatusUnknown
+#### Potential Issue - Fix platform-auth-service pod in ContainerStatusUnknown
 
 Follow the procedure in the following known issue document to resolve platform-auth-service pod in ContainerStatusUnknown issue
 
