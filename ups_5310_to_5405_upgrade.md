@@ -33,7 +33,6 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 - Upgrade Service Instances
 - Upgrade Cpdbr Service
 - Post Upgrade Validation
-- Troubleshooting References
 
 ---
 
@@ -110,6 +109,8 @@ Access Requirements
 - Access to IBM Container Registry (cp.icr.io)
 - Access to private registry: UPDATE_WITH_PRIVATE_REGISTRY_URL
 
+---
+
 Ensure your environment variables script is configured correctly
 
 **Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
@@ -131,7 +132,6 @@ Login to the cluster
 ```bash
 ${OC_LOGIN} && ${CPDM_OC_LOGIN}
 ```
-
 
 Verify nodes, machine config, cluster operators
 ```bash
@@ -163,30 +163,31 @@ For example
 oc label temporarypatch wa-store-assistant-limits type=critical-configuration
 ```
 
+---
 
 #### Advanced Service Prerequisites
 
-Some services require additional prerequisite software upgrades. Review [IBM Documentation](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-upgrading-prerequisite-software) for details
+Some services require additional prerequisite software upgrades
+ 
+**Reference**: [Upgrading prerequisite software](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-upgrading-prerequisite-software)
 
-**Multicloud Object Gateway (MCG)** - Required for: Watson Speech, Voice Gateway, Watsonx Ai
-[Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-multicloud-object-gateway) during storage or OCP upgrade
+**Reference**: [Upgrade MCG](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-multicloud-object-gateway)
 
-**Red Hat OpenShift Serverless Knative** - Required for: Watsonx Orchestrate
-[Upgrade Knative](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing) to supported version
+**Reference**: [Upgrading Red Hat OpenShift Serverless Knative Eventing](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-serverless-knative-eventing)
 
-**GPU Operators** - [Upgrade if needed](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-operators-services-that-require-gpus) for GPU-enabled services
+**Reference**: [Upgrading Operators For Services That Require GPU](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-operators-services-that-require-gpus)
 
-**Red Hat OpenShift AI** - [Review upgrade requirements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-ai) if using OpenShift AI
+**Reference**: [Upgrading Red Hat OpenShift AI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-ai)
 
-Based on the health check review, we've determined that some of these operators will need to be upgraded as follows
+Based on the health check review, no action should be required for these steps
 
 | Operator | Current CSV | Target for 5.4.0 | Action |
 | --- | --- | --- | --- |
-| OpenShift Serverless | 1.37.1 | 1.37.x | No action required. |
-| OpenShift AI (RHOAI) | 2.21.1 | 2.25.1 | Upgrade required. |
-| NVIDIA GPU Operator | 25.3.3 | 26.3.x | Upgrade required. |
-| Node Feature Discovery | 4.17.0 | 4.18.x | Upgrade required to match OCP/ODS version. |
-| IBM Events Operator | 5.2.1 | 6.0.0 | Upgrade required. |
+| OpenShift Serverless | 1.37.1 | 1.37.x | No action required |
+| OpenShift AI (RHOAI) | 2.25.9 | 2.25.x | No action required |
+| NVIDIA GPU Operator | 26.3.x | 26.3.x | No action required |
+| Node Feature Discovery | 4.20.0 | 4.20.x | No action required |
+| IBM Events Operator | 6.0.0 | 6.0.0 | No action required |
 
 ---
 
@@ -224,7 +225,7 @@ List service instances
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
 
-**Note: Fix any pod issues and ensure the service CRs are in Completed status before proceeding with the upgrade**
+**Note**: Fix any pod issues and ensure the service CRs are in Completed status before proceeding with the upgrade
 
 ---
 
@@ -248,6 +249,8 @@ Verify licensing pods are running
 oc get pods -n ${PROJECT_LICENSE_SERVICE}
 ```
 
+---
+
 #### Update Cluster-Scoped Resources for CPD Instance
 
 **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-updating-cluster-scoped-resources-instance)
@@ -270,6 +273,8 @@ oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resou
 #### Upgrading the IBM Events Operator
 
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator)
+
+---
 
 #### Potential Issue #1 - Kafka controller/broker pods in OOMKilled 
 
@@ -338,6 +343,8 @@ cpd-cli manage deploy-events-operator \
 --events_operand_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
 
+---
+
 #### Potential Issue #2 - Kafka CR TLS Issue 
 
 After initiating the upgrade of IBM Events Operator, monitor the Events operator logs and kafka CR for any of the following types of messages
@@ -388,6 +395,8 @@ Restart the kafka broker pods one at a time, and ensure the pod goes back into r
 oc delete po <kafka-broker-pod-name> -n knative-eventing 
 ```
 
+---
+
 #### Apply Entitlements
 
 **Reference**: [Applying your entitlements](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=aye-applying-your-entitlements-without-node-pinning-2)
@@ -426,7 +435,7 @@ Apply Cognos Analytics license, skip for non prod*
 
 ---
 
-Creating image pull secrets for the instance  
+#### Creating image pull secrets for the instance  
 
 **Reference**: [Creating image pull secrets for an instance of IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-creating-image-pull-secrets-instance)
 
@@ -469,6 +478,8 @@ Remove the entire spec/image_digests from ZenService lite-cr before proceeding
 oc patch zenservice lite-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
+---
+
 #### Upgrade CPD platform using install-components
 ```bash
 cpd-cli manage install-components \
@@ -499,6 +510,8 @@ Verify platform version
 oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
 ```
 
+---
+
 #### Reapply RSI Patches
 
 If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
@@ -521,8 +534,6 @@ oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ---
 
 ## Upgrade Services
-
-**Individual Service Upgrade (For More Control)**
 
 #### Upgrade Watsonx Orchestrate
 
@@ -580,6 +591,8 @@ cpd-cli manage install-components \
 --param-file=/tmp/work/install-options.yml \
 --upgrade=true
 ```
+
+---
 
 #### Potential Issue #3 - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
 
@@ -987,6 +1000,7 @@ NAME   VERSION   DEPLOYED   VERIFIED   TOTAL   INSTALLMODE         QUIESCE      
 wo     5.4.0     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 9d
 ```
 
+---
 
 #### Upgrade Watsonx Ai
 
@@ -1008,6 +1022,8 @@ cpd-cli manage install-components \
 --image_pull_secret=${IMAGE_PULL_SECRET} \
 --upgrade=true
 ```
+
+---
 
 #### Potential Issue #4 - OOMKilled on `install-and-reconsile` job
 
@@ -1105,6 +1121,8 @@ Monitor watsonx_ai upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_ai
 ```
 
+---
+
 #### Upgrade Watsonx Governance
 
 Create the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace/work directory
@@ -1146,6 +1164,9 @@ Monitor watsonx_governance upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_governance
 ```
 
+---
+
+
 #### Upgrade Watson Speech
 
 Before proceeding with the upgrade, save your current Watson Speech custom resource
@@ -1164,7 +1185,6 @@ non_olm:
     blockStorageClass: <ocs-storagecluster-ceph-rbd>
     fileStorageClass: <ocs-storagecluster-cephfs>
 ```
-
 
 Example cpd-cli install-components upgrade command
 ```bash
@@ -1261,6 +1281,8 @@ After the models are uploaded, verify that the new STT/TTS runtime pods are roll
 oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -w | grep -E "speech-cr-(stt|tts)-runtime"
 ```
 
+---
+
 #### Upgrade Voice Gateway
 ```bash
 cpd-cli manage install-components \
@@ -1281,6 +1303,8 @@ Monitor voice_gateway upgrade
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
 ```
 
+---
+
 #### Upgrade Db2 OLTP
 ```bash
 cpd-cli manage install-components \
@@ -1300,6 +1324,8 @@ Monitor db2oltp upgrade
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=db2oltp
 ```
+
+---
 
 #### Upgrade Cognos Analytics
 ```bash
@@ -1479,7 +1505,7 @@ cpd-cli oadp install \
 
 **Note**: This upgrade should be performed after all services have been upgraded
 
-**Note2**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.4.0.x in the air-gapped registry instead of the mirrored 5.4.0 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
+**Note**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.4.0.x in the air-gapped registry instead of the mirrored 5.4.0 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
 
 **Note3**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.4.0.5 tag
 
@@ -1524,5 +1550,7 @@ Validate 'expose:external-regional' label in the cpd route, add the label "expos
 ```bash
 oc get route cpd -o yaml
 ```
+
+---
 
 **End of Runbook**
