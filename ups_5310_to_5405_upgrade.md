@@ -1,5 +1,4 @@
 # UPS Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
-
 ## Author: Alex Kuan (alex.kuan@ibm.com)
 
 **From:**
@@ -7,8 +6,8 @@
 CPD: 5.3.1.0
 OCP: 4.20.25
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
-Internet: airgap
-Private container registry: yes
+Internet: Air-gapped
+Private container registry: Yes
 Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
@@ -17,8 +16,8 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 CPD: 5.4.0.5
 OCP: 4.20.25
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
-Internet: airgap
-Private container registry: yes
+Internet: Air-gapped
+Private container registry: Yes
 Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
@@ -73,9 +72,73 @@ The permissions required for the upgrade is ready
 - Permission to access the private image registry for pushing or pulling images
 - Access to the bastion node for executing the upgrade commands
 
-A pre-upgrade health check is made to ensure the cluster's readiness for upgrade
+---
 
-- The OpenShift cluster, persistent storage and IBM Software Hub platform and services are in healthy status
+### Updating your environment variables script
+
+Ensure that your environment variables script includes the correct information for the instance of IBM Software Hub that you want to upgrade
+
+**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
+
+
+Update the fields in your cpd_vars.sh file as needed
+```bash
+export VERSION=5.4.0
+export PATCH_ID=6
+export PROJECT_SCHEDULING_BR_SVC=ibm-cpd-scheduler-br-svc
+export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
+
+# ------------------------------------------------------------------------------
+# Backup and restore 
+# ------------------------------------------------------------------------------
+export BACKUP_NAME=online-backup-$(date '+%Y%m%d-%H%M%S')
+export RESTORE_NAME=${BACKUP_NAME}-restore
+export OADP_PROJECT=<enter your OADP project>
+# export OADP_VERSION=<OADP-version>
+export NODE_AGENT_POD_CPU_LIMIT=500m
+export KOPIA_POD_CPU_LIMIT=1
+# export PROJECT_FUSION=ibm-spectrum-fusion-ns
+# export PROJECT_PX_ADMIN_NS=<No default>
+# export PROJECT_NETAPP_TRIDENT_PROTECT=trident-protect
+# export NETAPP_TRIDENT_PROTECT_APP_VAULT=<AppVault name>
+export BR_OPERATOR_JOB_SA=bros-job-sa
+export BR_OPERATOR_SA=bros-sa
+# export PROJECT_INST_BR_SVC_NEW=${PROJECT_CPD_INST_OPERATORS_NEW}-br-svc
+# export PROJECT_CPD_INST_OPERATORS_NEW=<project-name>
+# export OPERATOR_MAPPING=${PROJECT_CPD_INST_OPERATORS}:${PROJECT_CPD_INST_OPERATORS_NEW}
+# export PROJECT_CPD_INST_OPERANDS_NEW=<project-name>
+# export OPERAND_MAPPING=${PROJECT_CPD_INST_OPERANDS}:${PROJECT_CPD_INST_OPERANDS_NEW}
+# export PROJECT_CPD_INSTANCE_TETHERED_1=<project-name>
+# export PROJECT_CPD_INSTANCE_TETHERED_1_NEW=<project-name>
+# export TETHER_MAPPING_1=${PROJECT_CPD_INSTANCE_TETHERED_1}:${PROJECT_CPD_INSTANCE_TETHERED_1_NEW}
+# export PROJECT_CPD_INSTANCE_TETHERED_2=<project-name>
+# export PROJECT_CPD_INSTANCE_TETHERED_2_NEW=<project-name>
+# export TETHER_MAPPING_2=${PROJECT_CPD_INSTANCE_TETHERED_2}:${PROJECT_CPD_INSTANCE_TETHERED_2_NEW}
+# export PROJECT_CPD_INSTANCE_TETHERED_LIST_NEW=${PROJECT_CPD_INSTANCE_TETHERED_1_NEW},${PROJECT_CPD_INSTANCE_TETHERED_2_NEW}
+# export RESTORE_PROJECT_MAPPING="${OPERATOR_MAPPING},${OPERAND_MAPPING}"
+# export RESTORE_PROJECT_MAPPING="${OPERATOR_MAPPING},${OPERAND_MAPPING},${TETHER_MAPPING_1},${TETHER_MAPPING_2}"
+
+# ------------------------------------------------------------------------------
+# S3 Object Storage
+# ------------------------------------------------------------------------------
+
+export S3_URL=<S3-url>
+export REGION=<S3-region>
+export BUCKET_NAME=<bucket-name>
+export BUCKET_PREFIX=<bucket-prefix>
+export ACCESS_KEY_ID=<access-key-ID>
+export SECRET_ACCESS_KEY=<access-key-secret>
+```
+
+Add the br_orchestration component after the cpd_platform component, for example
+```bash
+export COMPONENTS=ibm-licensing,scheduler,cpd_platform,br_orchestration,datastage_ent,ws_pipelines
+```
+
+Source the environment variables
+```bash
+source cpd_vars.sh
+```
 
 ---
 
