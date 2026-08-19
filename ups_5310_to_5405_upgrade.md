@@ -134,18 +134,18 @@ source cpd_vars.sh
 
 **Required Tools**:
 
-Ensure the following tools are installed and updated to the required versions:
+Ensure the following tools are installed and updated to the required versions
 - IBM Software Hub CLI: Version 14.4.0.3
 - OpenShift CLI (oc): Compatible version for your cluster
 - Helm CLI: Version 4.1.4
 
-For detailed instructions on installing or updating these tools, refer to:
+For detailed instructions on installing or updating these tools, refer to
 - [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-updating-client-workstations)
 - [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-software-hub-cli)
 - [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-openshift-cli)
 - [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-installing-helm-cli)
 
-**Required Access:**
+**Required Access**:
 - OpenShift cluster admin access
 - IBM Entitlement Key with appropriate permissions
 - Access to IBM Container Registry (cp.icr.io)
@@ -170,7 +170,7 @@ List all of the temporary patches in the operands namespace
 oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
-For all patches that you want to retain, use the following command:
+For all patches that you want to retain, use the following command
 ```bash
 oc label TemporaryPatch <patch_name> type=critical-configuration
 ```
@@ -391,7 +391,7 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 **Reference**: [Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-upgrading-software-hub)
 
-If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches:
+If there are patches that apply to zen or IBM Cloud Pak foundational services pods, run the following command to apply your custom patches
 ```bash
 cpd-cli manage apply-rsi-patches --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
@@ -958,7 +958,7 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-Monitor watson_speech upgrade, wait until the status shows `Completed` or `Ready`.
+Monitor watson_speech upgrade, wait until the status shows `Completed` or `Ready`
 ```bash
 oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
 ```
@@ -1045,12 +1045,31 @@ After upgrading service CRs, some services require additional instance upgrades
 
 ---
 
-Upgrading Service Instances
+#### Upgrading Service Instances
 
 Get a list of all service instances using the following command
 ```bash
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ```
+
+---
+
+#### Upgrading service instance of analyticsengine
+
+Upgrading the service instance
+```bash
+cpd-cli service-instance upgrade \
+--service-type=spark \
+--profile=${CPD_PROFILE_NAME} \
+--all
+```
+
+Validating the service instance upgrade status
+```bash
+cpd-cli service-instance list --service-type=spark --profile=${CPD_PROFILE_NAME}
+```
+
+---
 
 #### Upgrade Db2oltp service instances
 
