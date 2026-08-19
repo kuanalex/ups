@@ -23,18 +23,6 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 
 ---
 
-## Table of Contents
-- Prerequisites
-- Pre Upgrade Steps
-- Pre Upgrade Health Check
-- Upgrade Shared Cluster Components
-- Upgrade IBM Software Hub Platform and Services
-- Upgrade Service Instances
-- Upgrade Cpdbr Service and Install Backup Orchestration Service
-- Post Upgrade Validation
-
----
-
 ## Prerequisites
 
 Backup of the cluster is complete
@@ -255,30 +243,6 @@ cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 ---
 
 ## Upgrade Shared Cluster Components
-
-#### Update cluster-scoped resources for shared cluster components
-
-**Reference**: [Updating cluster-scoped resources for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components)
-
-Create the project for the Backup Restore Orchestration service for the scheduling service
-```bash
-oc new-project ${PROJECT_SCHEDULING_BR_SVC}
-```
-
-Generate the cluster-scoped resource definitions for the Backup Restore Orchestration service
-```bash
-cpd-cli manage case-download --components=br_orchestration --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_SCHEDULING_BR_SVC} --br_operator_ns=${PROJECT_SCHEDULING_BR_SVC} --cluster_resources=true
-```
-
-Run the oc apply -f command returned in the terminal
-```bash
-oc apply -f /.../cluster_scoped_resources.yaml --server-side --force-conflicts
-```
-
-Optional: If you want a record of the resources that you generated, rename the cluster_scoped_resources.yaml
-```bash
-mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_SCHEDULING_BR_SVC}-cluster_scoped_resources.yaml
-```
 
 #### Upgrade IBM Licensing
 
