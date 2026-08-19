@@ -486,10 +486,10 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Post upgrade tasks for Watsonx Orchestrate
 
-After completing this migration, follow the steps to apply the latest IBM watsonx Orchestrate release 5.4.0.5 Hot fix
+After completing this migration, follow the steps for 'Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0'
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
-**Reference**: [Applying the watsonx Orchestrate 5.4.0 hot fix 1](https://www.ibm.com/support/pages/node/7247038)
+**Reference**: [Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0](https://www.ibm.com/support/pages/node/7284300)
 
 Set the operator and operand namespaces
 ```bash
@@ -955,6 +955,9 @@ cpd-cli manage install-components \
 --instance_ns=${PROJECT_CPD_INST_OPERANDS} \
 --image_pull_prefix=${IMAGE_PULL_PREFIX} \
 --image_pull_secret=${IMAGE_PULL_SECRET} \
+--block_storage_class=${STG_CLASS_BLOCK} \
+--file_storage_class=${STG_CLASS_FILE} \
+--param-file=install-options.yml \
 --upgrade=true
 ```
 
