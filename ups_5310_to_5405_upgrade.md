@@ -30,7 +30,7 @@ Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_
 - Upgrade Shared Cluster Components
 - Upgrade IBM Software Hub Platform and Services
 - Upgrade Service Instances
-- Upgrade Cpdbr Service
+- Upgrade Cpdbr Service and Install Backup Orchestration Service
 - Post Upgrade Validation
 
 ---
@@ -56,12 +56,12 @@ Here is an example of the case-download syntax
 cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=0 --from_oci=true
 ```
 
-Remember to download the CASE package for the ibm_events_operator component
+Remember to download the CASE package for the ibm_events_operator component as well
 ```bash
 cpd-cli manage case-download --components=ibm_events_operator --release=${VERSION} --patch_id=${PATCH_ID} --from_oci=true
 ```
 
-Here is an example of the mirror-images syntax
+Here is an example of the mirror-images command syntax
 ```bash
 cpd-cli manage mirror-images --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --target_registry=${PRIVATE_REGISTRY_LOCATION} --arch=${IMAGE_ARCH} --case_download=false
 ```
@@ -74,23 +74,24 @@ The permissions required for the upgrade is ready
 
 ---
 
-### Updating your environment variables script
+#### Updating your environment variables script
 
 Ensure that your environment variables script includes the correct information for the instance of IBM Software Hub that you want to upgrade
 
 **Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
 
-
 Update the fields in your cpd_vars.sh file as needed
 ```bash
+# ------------------------------------------------------------------------------
+# VERSION and PATCH_ID
+# ------------------------------------------------------------------------------
 export VERSION=5.4.0
-export PATCH_ID=6
-export PROJECT_SCHEDULING_BR_SVC=ibm-cpd-scheduler-br-svc
-export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
-
+export PATCH_ID=5
 # ------------------------------------------------------------------------------
 # Backup and restore 
 # ------------------------------------------------------------------------------
+export PROJECT_SCHEDULING_BR_SVC=ibm-cpd-scheduler-br-svc
+export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
 export BACKUP_NAME=online-backup-$(date '+%Y%m%d-%H%M%S')
 export RESTORE_NAME=${BACKUP_NAME}-restore
 export OADP_PROJECT=<enter your OADP project>
@@ -121,7 +122,6 @@ export BR_OPERATOR_SA=bros-sa
 # ------------------------------------------------------------------------------
 # S3 Object Storage
 # ------------------------------------------------------------------------------
-
 export S3_URL=<S3-url>
 export REGION=<S3-region>
 export BUCKET_NAME=<bucket-name>
@@ -144,22 +144,18 @@ source cpd_vars.sh
 
 ## Pre Upgrade Steps
 
-Required Tools
+**Required Tools**:
 
 Ensure the following tools are installed and updated to the required versions:
 - IBM Software Hub CLI: Version 14.4.0.3
 - OpenShift CLI (oc): Compatible version for your cluster
 - Helm CLI: Version 4.1.4
 
-**Installation and Update Instructions:**
-
 For detailed instructions on installing or updating these tools, refer to:
 - [Updating client workstations](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-updating-client-workstations)
 - [Updating IBM Software Hub CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-software-hub-cli)
 - [Updating OpenShift CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-updating-openshift-cli)
 - [Installing Helm CLI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ucw-installing-helm-cli)
-
-Access Requirements
 
 **Required Access:**
 - OpenShift cluster admin access
@@ -169,30 +165,7 @@ Access Requirements
 
 ---
 
-Ensure your environment variables script is configured correctly
-
-**Reference**: [Updating your environment variables script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cri-updating-your-environment-variables-script)
-
-Source your environment variables script
-```bash
-source cpd_vars.sh
-```
-
-Set version and patch_id
-```bash
-export VERSION=5.4.0
-export PATCH_ID=5
-```
-
-Login to the cluster
-```bash
-${OC_LOGIN} && ${CPDM_OC_LOGIN}
-```
-
-Verify nodes, machine config, cluster operators
-```bash
-oc get nodes,mcp,co
-```
+#### Backup routes and temporary patches (for watson assistant)
 
 Take a backup of the routes
 ```bash
@@ -283,9 +256,33 @@ cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 
 ## Upgrade Shared Cluster Components
 
+#### Update cluster-scoped resources for shared cluster components
+
+**Reference**: [Updating cluster-scoped resources for shared cluster components](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-updating-cluster-scoped-resources-shared-cluster-components)
+
+Create the project for the Backup Restore Orchestration service for the scheduling service
+```bash
+oc new-project ${PROJECT_SCHEDULING_BR_SVC}
+```
+
+Generate the cluster-scoped resource definitions for the Backup Restore Orchestration service
+```bash
+cpd-cli manage case-download --components=br_orchestration --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_SCHEDULING_BR_SVC} --br_operator_ns=${PROJECT_SCHEDULING_BR_SVC} --cluster_resources=true
+```
+
+Run the oc apply -f command returned in the terminal
+```bash
+oc apply -f /.../cluster_scoped_resources.yaml --server-side --force-conflicts
+```
+
+Optional: If you want a record of the resources that you generated, rename the cluster_scoped_resources.yaml
+```bash
+mv cluster_scoped_resources.yaml ${VERSION}-${PROJECT_SCHEDULING_BR_SVC}-cluster_scoped_resources.yaml
+```
+
 #### Upgrade IBM Licensing
 
-**Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/cloud-paks/cp-data/5.4.x?topic=upgrading-shared-cluster-components)
+**Reference**: [Upgrading shared cluster components](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pyc-upgrading-shared-cluster-components)
 
 Upgrade IBM Licensing service
 ```bash
@@ -299,11 +296,11 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 ---
 
-#### Update Cluster-Scoped Resources for CPD Instance
+#### Update cluster-scoped resources for the instance
 
 **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-updating-cluster-scoped-resources-instance)
 
-Generate cluster-scoped resource definitions for CPD instance
+Generate cluster-scoped resources for the instance
 ```bash
 cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --cluster_resources=true
 ```
@@ -315,8 +312,9 @@ oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resou
 
 ---
 
-#### Upgrading the IBM Events Operator
+#### Upgrading Red Hat OpenShift Serverless Knative Eventing and the IBM Events Operator
 
+**Reference**: [Upgrading Red Hat OpenShift Serverless Knative Eventing](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=urhoske-upgrading-red-hat-openshift-serverless-knative-eventing-when-connected-internet-1)
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator)
 
 Login to the cluster
@@ -344,7 +342,7 @@ Upgrade the Red Hat OpenShift Serverless Knative Eventing software
 cpd-cli manage deploy-knative-eventing --release=${VERSION} --block_storage_class=${STG_CLASS_BLOCK} --upgrade=true
 ```
 
-Run the following command to upgrade the IBM Events Operator
+Upgrade the IBM Events Operator
 ```bash
 cpd-cli manage deploy-events-operator --release=${VERSION} --events_operator_ns=${PROJECT_CPD_INST_OPERATORS} --events_operand_ns=${PROJECT_CPD_INST_OPERANDS}
 ```
@@ -396,7 +394,7 @@ Apply Cognos Analytics license, skip for non prod*
 
 ## Upgrade IBM Software Hub Platform and Services
 
-**Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=upgrading)
+**Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-upgrading-software-hub)
 
 Login to the cluster
 ```bash
@@ -420,17 +418,7 @@ cpd-cli manage install-components \
 
 Monitor platform upgrade progress (this takes 60-80 minutes)
 ```bash
-watch -n 30 'oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath="{.status.zenStatus}"'
-```
-
-Check platform pods
-```bash
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} | grep -E "zen|usermgmt|ibm-nginx"
-```
-
-Verify platform version
-```bash
-oc get ZenService lite-cr -n ${PROJECT_CPD_INST_OPERANDS} -o jsonpath='{.status.zenStatus.versions[0].version}'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && echo "=== ZenService Progress ===" && oc get zenservice lite-cr -o yaml | grep progress && echo "=== Ibmcpd Progress ===" && oc get ibmcpd ibmcpd-cr -o yaml | grep progress'
 ```
 
 ---
@@ -447,11 +435,6 @@ cpd-cli manage apply-rsi-patches --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 Verify patches are active
 ```bash
 cpd-cli manage get-rsi-patch-info --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --all
-```
-
-Check that affected pods are running
-```bash
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
 ---
@@ -479,7 +462,7 @@ non_olm:
       watsonxaiifm: true
 ```
 
-**IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests
+**IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests from watsonxaiifm-cr
 
 Remove the image_digests section from watsonxaiifm-cr
 ```bash
@@ -542,7 +525,6 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 After completing this migration, follow the steps to apply the latest IBM watsonx Orchestrate release 5.4.0.5 Hot fix
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
-
 **Reference**: [Applying the watsonx Orchestrate 5.4.0 hot fix 1](https://www.ibm.com/support/pages/node/7247038)
 
 Set the operator and operand namespaces
@@ -1184,31 +1166,177 @@ Repeat the preceding steps to upgrade each service instance associated with this
 
 ---
 
-## Upgrade cpdbr service
+## Upgrade the cpdbr service (est. 5-10 minutes)
 
-You must upgrade the cpdbr service after you upgrade IBM Software Hub.
+**References**: [Upgrading the backup and restore software for an instance that uses the IBM Fusion](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ubrsi-fusion-backup-restore-utility)
+**References**: [What's new and changed in the platform](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=new-software-hub-platform#fixlist__title__2)
 
-**Reference**: [Updating the cpdbr service](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-updating-cpdbr-service)
+After you upgrade IBM Software Hub, you must upgrade the cpdbr-tenant service and install the Backup Restore Orchestration service for the instance
 
-For Environments Without Scheduling Service
+Log in to Red Hat OpenShift Container Platform as a cluster administrator
+```bash
+${OC_LOGIN}
+```
+
+Get the name of the Data Protection Application
+```bash
+oc get dpa --namespace=${OADP_PROJECT}
+```
+
+Set the DPA_NAME environment variable to the name of the Data Protection Application
+```bash
+export DPA_NAME=<DPA-name>
+```
+
+Patch the Data Protection Application custom resource
+
+The command that you run depends on where your cluster pulls images from
+
+Private container registry
+```bash
+oc patch dataprotectionapplication ${DPA_NAME} \
+--namespace=${OADP_PROJECT} \
+--type=json \
+-p='[
+  {
+    "op": "replace",
+    "path": "/spec/configuration/velero/customPlugins",
+    "value": \[ 
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs/cpfs-oadp-plugins:latest", 
+        "name": "cpfs-oadp-plugin" 
+      },
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/cpdbr-velero-plugin:${VERSION}",
+        "name": "cpdbr-velero-plugin" 
+      },
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/swhub-velero-plugin:${VERSION}", 
+        "name": "swhub-velero-plugin" 
+      },
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/db2u/db2u-velero-plugin:${VERSION}",
+        "name": "db2u-velero-plugin" 
+      } 
+    \]
+  }
+]'
+```
+
+Upgrade the cpdbr-tenant service
+
+The command that you run depends on where your cluster pulls images from
+
+Run the following command if you are using a private container registry and the scheduling service is not installed on the cluster
 ```bash
 cpd-cli oadp install \
 --component=cpdbr-tenant \
---cpdbr-hooks-image-prefix=${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd \
---cpfs-image-prefix=${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs \
---namespace=${OADP_OPERATOR_NS} \
+--namespace=${OADP_PROJECT} \
 --tenant-operator-namespace=${PROJECT_CPD_INST_OPERATORS} \
---skip-recipes=true \
+--private-registry-location=${PRIVATE_REGISTRY_LOCATION} \
 --upgrade=true \
 --log-level=debug \
 --verbose
 ```
 
-**Note**: This upgrade should be performed after all services have been upgraded
+Confirm that the required cluster role and cluster role binding were created in the ${PROJECT_INST_BR_SVC} when you installed the cpdbr-tenant service
 
-**Note**: If you encounter an imagepullbackoff issue for the cpdbr tenant service pod(s) this might be caused by your cpd-cli version. The cpd-cli utility version (BUILD_ID: 3.3.1.x) dynamically appends its own build suffix to backup image queries, causing the cluster to look for non-existent tag 5.4.0.x in the air-gapped registry instead of the mirrored 5.4.0 GA baseline; downgrading to cpd-cli version 14.3.0 can force it to query the correct GA tag
+If they do not exist, the command creates them
+```bash
+BINDING_NAME="cpdbr-tenant-service-crb-${PROJECT_CPD_INST_OPERATORS}"
+SHOULD_ADD=false
 
-**Note**: The workaround used during UPS non prod upgrade was to tag the image in the private registry with the 5.4.0.5 tag
+# Check if the exact combination of SA name and namespace exists
+if oc get clusterrolebinding ${BINDING_NAME} -o json | \
+   jq -e ".subjects[]? | select(.kind==\"ServiceAccount\" and .name==\"${BR_OPERATOR_JOB_SA}\" and .namespace==\"${PROJECT_INST_BR_SVC}\")" > /dev/null 2>&1; then
+  echo "ServiceAccount ${BR_OPERATOR_JOB_SA} already exists in namespace ${PROJECT_INST_BR_SVC}"
+else
+  echo "ServiceAccount ${BR_OPERATOR_JOB_SA} in namespace ${PROJECT_INST_BR_SVC} not found, adding"
+  SHOULD_ADD=true
+fi
+
+# Add the subject if needed
+if [ "${SHOULD_ADD}" = true ]; then
+  oc patch clusterrolebinding ${BINDING_NAME} --type=json -p="[
+    {
+      \"op\": \"add\",
+      \"path\": \"/subjects/-\",
+      \"value\": {
+        \"kind\": \"ServiceAccount\",
+        \"name\": \"${BR_OPERATOR_JOB_SA}\",
+        \"namespace\": \"${PROJECT_INST_BR_SVC}\"
+      }
+    }
+  ]"
+fi
+```
+
+Install the Backup Restore Orchestration service for the instance
+```bash
+cpd-cli manage apply-br \
+--license_acceptance=true \
+--release=${VERSION} \
+--patch_id=${PATCH_ID} \
+--br_tool=ibm-fusion \
+--fusion_spectrum_ns=${PROJECT_FUSION} \
+--fusion_br_ns=${OADP_PROJECT} \
+--br_operator_ns=${PROJECT_INST_BR_SVC} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET}
+```
+
+Give the ${BR_OPERATOR_SA} service account the edit cluster role on the required projects
+```bash
+oc create rolebinding bros-rolebinding-edit --clusterrole=edit --serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_SA} -n ${PROJECT_INST_BR_SVC}
+oc label rolebinding bros-rolebinding-edit -n ${PROJECT_INST_BR_SVC} component-id=br-orchestration icpdsupport/addOnId=bros
+```
+
+Give the ${BR_OPERATOR_JOB_SA} service account the edit cluster role on the required projects
+```bash
+# Assign the edit role in the operators project
+# =======================================================================================
+oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
+--clusterrole=edit \
+--serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} \
+-n ${PROJECT_CPD_INST_OPERATORS}
+
+oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
+-n ${PROJECT_CPD_INST_OPERATORS} \
+component-id=br-orchestration \
+icpdsupport/addOnId=bros
+
+# Assign the edit role in the operands project
+# =======================================================================================
+oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
+--clusterrole=edit \
+--serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} \
+-n ${PROJECT_CPD_INST_OPERANDS}
+
+
+oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
+-n ${PROJECT_CPD_INST_OPERANDS} \
+component-id=br-orchestration \
+icpdsupport/addOnId=bros
+
+if [ -n "${PROJECT_CPD_INSTANCE_TETHERED_LIST}" ]; then
+    IFS=',' read -ra TETHERED_NS_LIST <<< "${PROJECT_CPD_INSTANCE_TETHERED_LIST}"
+    
+    for TETHERED_NS in "${TETHERED_NS_LIST[@]}"; do
+      oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
+      --clusterrole=edit \
+      --serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} \
+      -n ${TETHERED_NS}
+      
+      oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
+      -n ${TETHERED_NS} \
+      component-id=br-orchestration \
+      icpdsupport/addOnId=bros
+
+    done
+fi
+```
 
 ---
 
@@ -1216,9 +1344,9 @@ cpd-cli oadp install \
 
 #### Potential Issue - Enable WxO Observability
 
-Follow the procedure in the following document to enable WxO Observability
+WxO development team to provide the new procedure to enable WxO Observability
 
-**IMPORTANT**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
+**Previous runbook**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
 
 ---
 
@@ -1226,7 +1354,7 @@ Follow the procedure in the following document to enable WxO Observability
 
 Follow the procedure in the following known issue document to resolve platform-auth-service pod in ContainerStatusUnknown issue
 
-**IMPORTANT**: [Enabling the debug trace for the platform-auth-service cause pod in ContainerStatusUnknown state and repeatedly get evicted](https://www.ibm.com/mysupport/s/defect/aCIgJ000000C9qjWAC/dt467023?language=en_US)
+**Previous runbook**: [Enabling the debug trace for the platform-auth-service cause pod in ContainerStatusUnknown state and repeatedly get evicted](https://www.ibm.com/mysupport/s/defect/aCIgJ000000C9qjWAC/dt467023?language=en_US)
 
 ---
 
