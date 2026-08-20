@@ -980,7 +980,7 @@ cpd-cli manage install-components \
 
 Monitor the pods custom resources related to watsonx_governance
 ```bash
-watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get watsonxgovernance'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get openpagesinstances,watsonxgovernance'
 ```
 
 Monitor watsonx_governance upgrade
