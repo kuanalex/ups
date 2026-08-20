@@ -280,9 +280,8 @@ oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resou
 
 ---
 
-#### Upgrading Red Hat OpenShift Serverless Knative Eventing and the IBM Events Operator
+#### Upgrading the IBM Events Operator
 
-**Reference**: [Upgrading Red Hat OpenShift Serverless Knative Eventing](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=urhoske-upgrading-red-hat-openshift-serverless-knative-eventing-when-connected-internet-1)
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator)
 
 Login to the cluster
@@ -303,11 +302,6 @@ cpd-cli manage deploy-events-operator --release=${VERSION} --cluster_resources=t
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
 oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
-```
-
-Upgrade the Red Hat OpenShift Serverless Knative Eventing software
-```bash
-cpd-cli manage deploy-knative-eventing --release=${VERSION} --block_storage_class=${STG_CLASS_BLOCK} --upgrade=true
 ```
 
 Upgrade the IBM Events Operator
