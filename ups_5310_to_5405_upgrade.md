@@ -120,7 +120,7 @@ export SECRET_ACCESS_KEY=<access-key-secret>
 
 Add the br_orchestration component after the cpd_platform component, for example
 ```bash
-export COMPONENTS=ibm-licensing,scheduler,cpd_platform,br_orchestration,datastage_ent,ws_pipelines
+export COMPONENTS=ibm-licensing,ibm_events_operator,cpd_platform,br_orchestration,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 Source the environment variables
