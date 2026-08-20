@@ -446,6 +446,11 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
+Monitor watsonx_orchestrate upgrade progress
+```bash
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && echo "=== WxO Progress ===" && oc get wo'
+```
+
 ---
 
 #### Potential Issue - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
