@@ -837,6 +837,11 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
+Monitor the pods custom resources related to watsonx_ai
+```bash
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get wmlbase,ws,watsonxai'
+```
+
 ---
 
 #### Potential Issue  - OOMKilled on `install-and-reconcile` job
