@@ -839,7 +839,7 @@ cpd-cli manage install-components \
 
 Monitor the pods custom resources related to watsonx_ai
 ```bash
-watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get wmlbase,ws,watsonxai'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,wmlbase,ws,watsonxai'
 ```
 
 ---
@@ -976,6 +976,11 @@ cpd-cli manage install-components \
 --image_pull_secret=${IMAGE_PULL_SECRET} \
 --param-file=/tmp/work/install-options.yml \
 --upgrade=true
+```
+
+Monitor the pods custom resources related to watsonx_governance
+```bash
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get watsonxgovernance'
 ```
 
 Monitor watsonx_governance upgrade
