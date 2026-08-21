@@ -1036,7 +1036,7 @@ cpd-cli manage install-components \
 
 Monitor voice_gateway upgrade
 ```bash
-watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get voicegateway'
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get voicegateway voicegateway-cr -o yaml | grep -A 10 status'
 ```
 
 Check the voice_gateway custom resource status
@@ -1063,6 +1063,11 @@ cpd-cli manage install-components \
 
 Monitor db2oltp upgrade
 ```bash
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get Db2oltpService db2oltp-cr -o yaml | grep progress'
+```
+
+Check the db2oltp custom resource status
+```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=db2oltp
 ```
 
@@ -1084,6 +1089,10 @@ cpd-cli manage install-components \
 ```
 
 Monitor cognos_analytics upgrade
+```bash
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get caservices ca-addon-cr -o yaml | grep progress'
+```
+
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=cognos_analytics
 ```
