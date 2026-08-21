@@ -1174,6 +1174,15 @@ Check the watson_speech custom resource status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
 ```
 
+After upgrading speech update the speech-cr as follows
+```bash
+spec:
+  global:
+    doNotManage:
+    - configmap/speech-cr-stt-runtime
+    - configmap/speech-cr-tts-runtime
+```
+
 ---
 
 #### Upgrade Voice Gateway
