@@ -200,11 +200,11 @@ Based on the health check review, no action should be required for these steps
 
 | Operator | Current CSV | Target for 5.4.0 | Action |
 | --- | --- | --- | --- |
-| OpenShift Serverless | 1.37.1 | 1.37.x | No action required |
+| OpenShift Serverless | 1.37.1 | 1.37.1 | No action required |
 | OpenShift AI (RHOAI) | 2.25.9 | 2.25.x | No action required |
 | NVIDIA GPU Operator | 26.3.x | 26.3.x | No action required |
 | Node Feature Discovery | 4.20.0 | 4.20.x | No action required |
-| IBM Events Operator | 6.0.0 | 6.0.0 | No action required |
+| IBM Events Operator | 6.0.0 | 6.1.1 | Upgrade required |
 
 ---
 
@@ -1003,9 +1003,9 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 #### Potential Issue  - OOMKilled on `install-and-reconcile` job
 
-During prod-east upgrade an issue was encountered with the 'install-and-reconsile' job during Watsonx AI upgrade
+During prod-east upgrade to 5.3.1 patch 0 an issue was encountered with the 'install-and-reconsile' job during Watsonx AI upgrade
 
-The `wml-install-and-reconcile` job reached its backofflimit of 6 because all 6 job start ups failed due to OOMKilled
+The `wml-install-and-reconsile` job reached its backofflimit of 6 because all 6 job start ups failed due to OOMKilled
 
 This caused the `wml-cr` on the `wmlbases` resource to become stuck during the watsonX AI upgrade
 
