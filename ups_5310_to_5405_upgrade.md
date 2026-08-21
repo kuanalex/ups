@@ -446,14 +446,168 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
+---
+
 Monitor watsonx_orchestrate upgrade
 ```bash
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,watsonxaiifm,wa,wo'
 ```
 
+#### Potential Issue - Watson Orchestrate Postgres Instance Stuck
+
+Check the status of the wo-watson-orchestrate-postgresedb cluster
+```bash
+oc get clusters.postgresql.k8s.enterprisedb.io wo-watson-orchestrate-postgresedb
+```
+
+Output
+```bash
+NAME                                AGE   INSTANCES   READY   STATUS                                       PRIMARY
+wo-watson-orchestrate-postgresedb   19d   3           2       Waiting for the instances to become active   wo-watson-orchestrate-postgresedb-2
+```
+
+Check the status of the orchestrate-postgresedb replica pods
+```bash
+wo-watson-orchestrate-postgresedb-3     0/1     CrashLoopBackOff
+```
+
+Check the logs of the replica(s) in CrashLoopBackOff
+```bash
+oc logs wo-watson-orchestrate-postgresedb-3 -n cpd-instance --tail=50 | grep FATAL
+```
+
+Output
+```bash
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+{"level":"info","ts":"2026-08-20T04:25:14.355509372Z","logger":"postgres","msg":"record","logging_pod":"wo-watson-orchestrate-postgresedb-3","record":{"log_time":"2026-08-20 04:25:14.355 UTC","user_name":"postgres","database_name":"postgres","process_id":"37","connection_from":"[local]","session_id":"6a8681aa.25","session_line_num":"1","session_start_time":"2026-08-20 04:25:14 UTC","transaction_id":"0","error_severity":"FATAL","sql_state_code":"57P03","message":"the database system is starting up","backend_type":"client backend","query_id":"0"}}
+```
+
+Similar issue is reported in CSP ticket - TS022632926
+
+Delete the broken replica pod and pvc using the cnp plug-in
+```bash
+oc cnp destroy wo-watson-orchestrate-postgresedb wo-watson-orchestrate-postgresedb-3 -n cpd-instance
+```
+
+This should fix the broken replica pod shortly after and unblock the upgrade
+```bash
+oc get po | grep postgresedb 
+wo-watson-orchestrate-postgresedb-1                               1/1     Running             0             3m40s
+wo-watson-orchestrate-postgresedb-2                               1/1     Running             0             17s
+wo-watson-orchestrate-postgresedb-4                               1/1     Running             0             4m5s
+```
+
 ---
 
-#### Potential Issue - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
+#### Potential Issue - Orchestrate custom resource stuck at 97% - Deploying Milvus
+
+During a test upgrade, Orchestrate got stuck during the Milvus deployment
+```bash
+oc get wo
+NAME   VERSION   PATCH_VERSION     READY        DEPLOYING_COMPONENT   DEPLOYED   VERIFIED   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
+wo     5.4.0     Patch 5 (8.0.2)   InProgress   milvus                45/45      44/45      agentic_assistant   NOT_QUIESCED   97%                  20d
+```
+
+Review the status messages in the Milvus custom resource
+```bash
+oc get wxdengine wo-milvus -n cpd-instance -o yaml | grep -A 10 status:
+```
+
+Status/message:
+```bash
+status:
+  conditions:
+  - lastTransitionTime: "2026-08-20T02:19:02Z"
+    message: ""
+    reason: ""
+    status: "False"
+    type: Successful
+  - lastTransitionTime: "2026-08-20T19:16:40Z"
+    message: Running reconciliation
+    reason: Running
+    status: "False"
+    type: Running
+  - ansibleResult:
+      changed: 1
+      completion: "2026-08-20T19:16:53.36887+00:00"
+      failures: 1
+      ok: 36
+      skipped: 17
+    lastTransitionTime: "2026-08-20T02:46:54Z"
+    message: |
+      The conditional check '(licensing_cr_premium.resources is defined and licensing_cr_premium.resources | length > 0 and licensing_cr_premium.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_standard.resources is defined and licensing_cr_standard.resources | length > 0 and licensing_cr_standard.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_spark.resources is defined and licensing_cr_spark.resources | length > 0 and ('spark' in wxd_addon_cr.spec.components or 'spark' in wxd_addon_premium_cr.spec.components) and licensing_cr_spark.resources[0].spec.set.cloudpakName in license_map)' failed. The error was: error while evaluating conditional ((licensing_cr_premium.resources is defined and licensing_cr_premium.resources | length > 0 and licensing_cr_premium.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_standard.resources is defined and licensing_cr_standard.resources | length > 0 and licensing_cr_standard.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_spark.resources is defined and licensing_cr_spark.resources | length > 0 and ('spark' in wxd_addon_cr.spec.components or 'spark' in wxd_addon_premium_cr.spec.components) and licensing_cr_spark.resources[0].spec.set.cloudpakName in license_map)): 'dict object' has no attribute 'spec'
+
+      The error appears to be in '/opt/ansible/roles/common/tasks/licensing.yaml': line 112, column 7, but may
+      be elsewhere in the file depending on the exact syntax problem.
+
+      The offending line appears to be:
+
+        when:
+          - (licensing_cr_premium.resources is defined and licensing_cr_premium.resources | length > 0 and licensing_cr_premium.resources[0].spec.set.cloudpakName in license_map)
+            ^ here
+    reason: Failed
+    status: "True"
+    type: Failure
+  engineStatus: Completed
+  middleEndStatus: RUNNING
+  middleEndStatusCode: "0"
+  upgradeStatus: 7/7 - Upgrade complete
+  versions:
+    reconciled: 2.3.1
+```
+
+Workaround was to create the missing ibmlicensingdefinition and restart the lakehouse operator pod
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: operator.ibm.com/v1
+kind: IBMLicensingDefinition
+metadata:
+  name: addonidwatsonxdata
+  namespace: cpd-instance
+  labels:
+    icpdsupport/addOnId: watsonx_data
+    icpdsupport/entitlement: watsonx-orchestrate
+  annotations:
+    cloudpakId: "6341c0866cd24bb298037e1476bd4e56"
+    cloudpakName: "IBM watsonx Orchestrate Cartridge"
+    productID: "0be53fb8946d4b82a770f82d60f05657"
+    productName: "IBM watsonx Orchestrate"
+    productMetric: "FREE"
+spec:
+  action: modifyOriginal
+  condition:
+    metadata:
+      annotations:
+        cloudpakInstanceId: "3edfc5f2-f5c1-4132-95bc-7aad0a7e67f6"
+      labels:
+        icpdsupport/addOnId: watsonx_data
+  scope: cluster
+  set:
+    cloudpakId: "6341c0866cd24bb298037e1476bd4e56"
+    cloudpakName: "IBM watsonx Orchestrate Cartridge"
+    productID: "0be53fb8946d4b82a770f82d60f05657"
+    productName: "IBM watsonx Orchestrate"
+    productMetric: "FREE"
+    productChargedContainers: ""
+    productCloudpakRatio: ""
+EOF
+```
+
+Delete the lakehouse operator pod
+```bash
+oc delete pod -n cpd-operators ibm-lakehouse-controller-manager-664ddf845c-xvzsh
+```
+
+Orchestrate completes Milvus deployment afterward
+```bash
+oc get wo
+NAME   VERSION   PATCH_VERSION     READY   DEPLOYING_COMPONENT   DEPLOYED   VERIFIED   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
+wo     5.4.0     Patch 5 (8.0.2)   True    All Deployed          45/45      45/45      agentic_assistant   NOT_QUIESCED   100%                 21d
+```
+
+---
+
+#### Potential Issue - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade (from 5.3.1 patch 0 upgrade)
 
 The ephemeralDeployment data type was updated from Boolean to String, and this required an edit on the wo-wa-data-governor-opensearch-ephemeral temporarypatch in this section
 ```bash
@@ -480,6 +634,8 @@ Validate the patch updates
 oc get patch wo-wa-data-governor-opensearch-ephemeral -o yaml
 ```
 
+---
+
 Check the watsonx_orchestrate custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_orchestrate
@@ -492,6 +648,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 After completing this migration, follow the steps for 'Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0'
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
+
 **Reference**: [Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0](https://www.ibm.com/support/pages/node/7284300)
 
 Set the operator and operand namespaces
