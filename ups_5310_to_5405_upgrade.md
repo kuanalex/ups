@@ -446,7 +446,7 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-Monitor watsonx_orchestrate upgrade progress
+Monitor watsonx_orchestrate upgrade
 ```bash
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,watsonxaiifm,wa,wo'
 ```
@@ -480,7 +480,7 @@ Validate the patch updates
 oc get patch wo-wa-data-governor-opensearch-ephemeral -o yaml
 ```
 
-Monitor watsonx_orchestrate upgrade
+Check the watsonx_orchestrate custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_orchestrate
 ```
@@ -837,7 +837,7 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-Monitor the pods custom resources related to watsonx_ai
+Monitor watsonx_ai upgrade
 ```bash
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,wmlbase,ws,watsonxai'
 ```
@@ -935,7 +935,7 @@ This loaded the higher memory into the job defention and allowed us to pass thro
 
 Recommended that support needs to look into this with larger enviroments
 
-Monitor watsonx_ai upgrade
+Check the watsonxai custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_ai
 ```
@@ -978,18 +978,17 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-Monitor the pods custom resources related to watsonx_governance
+Monitor watsonx_governance upgrade
 ```bash
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get Db2aaserviceService,openpagesinstances,watsonxgovernance'
 ```
 
-Monitor watsonx_governance upgrade
+Check the watsonx governance custom resource stauts
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_governance
 ```
 
 ---
-
 
 #### Upgrade Watson Speech
 
@@ -1008,12 +1007,12 @@ cpd-cli manage install-components \
 --upgrade=true
 ```
 
-Monitor watson_speech upgrade, wait until the status shows `Completed` or `Ready`
+Monitor watson_speech upgrade
 ```bash
-oc get WatsonSpeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS}
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get watsonspeech speech-cr -o yaml | grep progress'
 ```
 
-Check the cr status
+Check the watson_speech custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
 ```
@@ -1036,6 +1035,11 @@ cpd-cli manage install-components \
 ```
 
 Monitor voice_gateway upgrade
+```bash
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get voicegateway'
+```
+
+Check the voice_gateway custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
 ```
