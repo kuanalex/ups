@@ -1162,7 +1162,7 @@ cpd-cli service-instance upgrade --service-type=db2oltp --instance-name=${INSTAN
 
 Set the INSTANCE_VERSION environment variable to the version that corresponds to the version of IBM Software Hub on your cluster
 ```bash
-export INSTANCE_VERSION=30.0.0
+export INSTANCE_VERSION=30.0.4
 ```
 
 Upgrade the service instances
