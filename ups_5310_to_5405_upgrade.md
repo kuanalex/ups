@@ -839,7 +839,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_ai upgrade
 ```bash
-watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,wmlbase,ws,watsonxai'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,wmlbase,ws,NotebookRuntime,watsonxai'
 ```
 
 ---
