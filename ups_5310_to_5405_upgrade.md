@@ -1215,6 +1215,7 @@ Repeat the preceding steps to upgrade each service instance associated with this
 ## Upgrade the cpdbr service (est. 5-10 minutes)
 
 **References**: [Upgrading the backup and restore software for an instance that uses the IBM Fusion](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ubrsi-fusion-backup-restore-utility)
+
 **References**: [What's new and changed in the platform](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=new-software-hub-platform#fixlist__title__2)
 
 After you upgrade IBM Software Hub, you must upgrade the cpdbr-tenant service and install the Backup Restore Orchestration service for the instance
