@@ -338,7 +338,7 @@ cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} 
 
 Apply watsonx Orchestrate non prod license
 ```bash
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-orchestrate
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-orchestrate --production=false
 ```
 
 Apply Watson Speech licenses, skip for non prod*
@@ -350,6 +350,19 @@ Apply Watson Speech licenses, skip for non prod*
 Apply Cognos Analytics license, skip for non prod*
 ```bash
 #cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cognos-analytics
+```
+
+Confirm the status of the applied entitlements by checking the cpd-applied-entitlements configmap
+```bash
+oc get cm cpd-applied-entitlements -o yaml
+```
+
+For example
+```bash
+data:
+  applied-entitlements: '{"cpd-enterprise": {"production": "false"}, "watsonx-ai":
+    {"production": "false"}, "watsonx-gov-mm": {"production": "false"}, "watsonx-gov-rc":
+    {"production": "false"}, "watsonx-orchestrate": {"production": "false"}}'
 ```
 
 ---
