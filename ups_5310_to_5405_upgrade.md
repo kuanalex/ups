@@ -512,6 +512,16 @@ Remove the image_digests section from watsonxaiifm-cr
 oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
+Remove the image_digests section from woservice aiopenscale custom resource
+```bash
+oc patch woservice aiopenscale -n ups-wx-operands --type='json' -p='[{"op": "remove", "path": "/spec/image_digests"}]'
+```
+
+Remove the image.digestOverrides from the wo custom resource
+```bash
+oc patch wo wo -n ups-wx-operands --type=merge -p='{"spec": {"image": {"digestOverrides": null}}}'
+```
+
 Upgrade watsonx_orchestrate
 ```bash
 cpd-cli manage install-components \
