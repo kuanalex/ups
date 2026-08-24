@@ -637,7 +637,7 @@ status:
     reconciled: 2.3.1
 ```
 
-Workaround was to create the missing ibmlicensingdefinition and restart the lakehouse operator pod
+The workaround used at the time was to create the missing ibmlicensingdefinition and restart the lakehouse operator pod
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: operator.ibm.com/v1
@@ -1049,7 +1049,39 @@ oc get wo
 The expected output
 ```bash
 NAME   VERSION   DEPLOYED   VERIFIED   TOTAL   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
-wo     5.4.2     34         34         34      agentic_assistant   NOT_QUIESCED   100%                 Xd
+wo     5.4.2     45         45         45      agentic_assistant   NOT_QUIESCED   100%                 Xd
+```
+
+**Important**: For any other issues with Watsonx Orchestrate components, you can run the check_orchestrate_health utility, found here
+```bash
+wget -O check_orchestrate_health_v12.sh https://raw.githubusercontent.com/watson-developer-cloud/community/master/watsonx-orchestrate/scripts/check_orchestrate_health_v12.sh ; sh check_orchestrate_health_v12.sh -t
+```
+
+Post upgrade of orchestrate, remove the 'wo.watsonx.ibm.com/hands-off' annotation from Orchestrate rediscp
+```bash
+oc get rediscp wo-watson-orchestrate-rediscp -oyaml
+apiVersion: redis.ibm.com/v1
+kind: Rediscp
+metadata:
+  annotations:
+    wo.watsonx.ibm.com/hands-off: "yes" -- ***this needs to be removed***
+```
+
+Make sure to add the resource configurations from rediscp instance in the 5.4.2 wo custom resource
+```bash
+  redis_resources:
+    limits:
+      cpu: "2"
+      ephemeral-storage: 1Gi
+      memory: 50Gi
+    requests:
+      cpu: "1"
+      ephemeral-storage: 10Mi
+      memory: 40Gi
+  persistentVolume:
+    accessModes:
+    - ReadWriteOnce
+    size: 150Gi
 ```
 
 ---
