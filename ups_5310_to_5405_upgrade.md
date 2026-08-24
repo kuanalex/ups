@@ -385,6 +385,40 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 ---
 
+#### Potential Issue - EDB operator to IBM PG operator migration fails because pods do not restart
+
+**Reference**: [EDB operator to IBM PG operator migration fails because pods do not restart](https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.19.x?topic=ui-edb-operator-pg-operator-migration-fails-because-pods-do-not-restart)
+
+In IBM Cloud Pak foundational services versions 4.19.0, 4.19.1, and 4.19.2, EDB operator to IBM PG operator migration fails in heavy workload clusters because the migration job updates pod metadata for labels and owner references before the pods restart with the new IBM PG image
+
+Review the following symptoms and apply the suggested workaround as required
+
+Symptom 1 - The common-service-db-pg-migration-job job takes hours but remains in the Running 0/1 status
+```bash
+# oc get jobs -n <data namespace> | grep db-pg-migration
+common-service-db-pg-migration-job               Running    0/1           3h         3h
+```
+
+Symptom 2 - The common-service-db cluster custom resource (CR) is stuck in the Switchover in progress or Instance Status Extraction Error: HTTP communication issue status
+```bash
+# oc get cluster.pg.ibm.com -A
+NAMESPACE   NAME                AGE    INSTANCES   READY   STATUS                   PRIMARY
+zen         common-service-db   176m   2           1       Switchover in progress   common-service-db-1
+
+# oc get cluster.pg.ibm.com
+NAME                  AGE     INSTANCES   READY   STATUS                                                       PRIMARY
+common-service-db   2m36s   3           2       Instance Status Extraction Error: HTTP communication issue
+```
+
+Symptom 3 - The common-service-db-x replica pod fails with an error message similar to the following example
+```bash
+{"level":"info","ts":"2026-07-31T09:23:44.870529463Z","logger":"wait-for-get-cluster","msg":"Encountered an error while executing get cluster. Will wait and retry","logging_pod":"common-service-db-2","error":"clusters.postgresql.k8s.enterprisedb.io \"common-service-db\" is forbidden: User \"system:serviceaccount:zen:common-service-db\" cannot get resource \"clusters\" in API group \"postgresql.k8s.enterprisedb.io\" in the namespace \"zen\""}
+```
+
+Workaround - Manually delete the failed common-service-db-x pod so that it restarts, and the pod comes back up with the correct image and permissions, repeating this step for any other failed replica 
+
+---
+
 #### Reapply RSI Patches
 
 **Reference**: [Upgrading Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=uish-upgrading-software-hub)
