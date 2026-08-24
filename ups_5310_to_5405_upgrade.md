@@ -131,7 +131,7 @@ source cpd_vars.sh
 **Required Tools**:
 
 Ensure the following tools are installed and updated to the required versions
-- IBM Software Hub CLI: Version 14.4.0.3
+- IBM Software Hub CLI: Version 14.4.0.5
 - OpenShift CLI (oc): Compatible version for your cluster
 - Helm CLI: Version 4.1.4
 
