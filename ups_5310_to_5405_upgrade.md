@@ -280,6 +280,39 @@ oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resou
 
 **Reference**: [Upgrading the IBM Events Operator for watsonx Assistant or watsonx Orchestrate](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-upgrading-events-operator)
 
+Before proceeding with the Events Operator upgrade, make sure the kafka controller and broker pods are healthy
+```bash
+oc get po -n knative-eventing | grep -E 'eventing-kafka-broker|eventing-kafka-controller'
+```
+
+For example
+```bash
+knative-eventing-kafka-knative-eventing-kafka-broker-0       1/1     Running     0                4d14h
+knative-eventing-kafka-knative-eventing-kafka-broker-1       1/1     Running     0                4d14h
+knative-eventing-kafka-knative-eventing-kafka-broker-2       1/1     Running     0                4d14h
+knative-eventing-kafka-knative-eventing-kafka-controller-3   1/1     Running     0                4d14h
+knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running     0                4d14h
+knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0                4d14h
+```
+
+If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
+
+Scale down the Data Governor operator in ups-wx-operators namespace, then proceed with the following steps
+
+For the broker KafkaNodePool
+```bash
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
+```
+
+For the controller KafkaNodePool
+```bash
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
+```
+
+Once these pods are stable, proceed with upgrading the Events operator, and continue to monitor for memory issues
+
+---
+
 Login to the cluster
 ```bash
 ${CPDM_OC_LOGIN}
@@ -298,6 +331,11 @@ cpd-cli manage deploy-events-operator --release=${VERSION} --cluster_resources=t
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
 oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+```
+
+Upgrade the Red Hat OpenShift Serverless Knative Eventing software
+```bash
+cpd-cli manage deploy-knative-eventing --release=${VERSION} --block_storage_class=${STG_CLASS_BLOCK} --upgrade=true
 ```
 
 Upgrade the IBM Events Operator
