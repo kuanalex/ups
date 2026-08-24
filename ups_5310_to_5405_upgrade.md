@@ -1082,7 +1082,7 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 ---
 
-#### Potential Issue  - OOMKilled on `install-and-reconcile` job
+#### Potential Issue  - OOMKilled on `install-and-reconsile` job
 
 During prod-east upgrade to 5.3.1 patch 0 an issue was encountered with the 'install-and-reconsile' job during Watsonx AI upgrade
 
@@ -1289,6 +1289,32 @@ watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Complete
 Check the voice_gateway custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
+```
+
+---
+
+#### Upgrade Analyicsengine
+```bash
+cpd-cli manage install-components \
+--license_acceptance=true \
+--components=analyticsengine \
+--release=${VERSION} \
+--patch_id=${PATCH_ID} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--upgrade=true
+```
+
+Monitor Analytics Engine upgrade
+```bash
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get analyticsengine -o yaml | grep progress'
+```
+
+Check the Analytics Engine custom resource status
+```bash
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=analyticsengine
 ```
 
 ---
