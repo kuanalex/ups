@@ -531,7 +531,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_orchestrate upgrade
 ```bash
-watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,watsonxaiifm,wa,wo'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,watsonxaiifm,wa,woservices,wo'
 ```
 
 #### Potential Issue - Watson Orchestrate Postgres Instance Stuck
