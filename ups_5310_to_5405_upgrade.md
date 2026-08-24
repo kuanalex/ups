@@ -1356,6 +1356,18 @@ Upgrade the service instance
 cpd-cli service-instance upgrade --service-type=db2oltp --instance-name=${INSTANCE_NAME} --profile=${CPD_PROFILE_NAME}
 ```
 
+Repeat the preceding steps to upgrade each service instance associated with this instance of IBM Software Hub
+
+---
+
+#### Potential Issue - Db2oltp Instance Version Not Updating
+
+During testing, Db2oltp service instance version was not being updated to the latest version, 12.1.5.0-cn1-amd64
+
+This was due to a mismatch in the values of the zen-database-core configmap and db2oltp json inside the zen-database-core pod
+
+Restart the zen-database-core pod and then once the zen-database-core pod is running, re-run the upgrade for db2oltp instance with the mismatched version
+
 ---
 
 #### Upgrade Cognos Analytics service instances
