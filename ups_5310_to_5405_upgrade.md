@@ -512,11 +512,6 @@ Remove the image_digests section from watsonxaiifm-cr
 oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
-Remove the image_digests section from woservice aiopenscale custom resource
-```bash
-oc patch woservice aiopenscale -n ups-wx-operands --type='json' -p='[{"op": "remove", "path": "/spec/image_digests"}]'
-```
-
 Remove the image.digestOverrides from the wo custom resource
 ```bash
 oc patch wo wo -n ups-wx-operands --type=merge -p='{"spec": {"image": {"digestOverrides": null}}}'
@@ -1241,6 +1236,11 @@ non_olm:
 #     databaseType: internal
 #     database: Db2
 #     dbSecretName: <secret-name>
+```
+
+Remove the image_digests section from woservice aiopenscale custom resource
+```bash
+oc patch woservice aiopenscale -n ups-wx-operands --type='json' -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
 Upgrade watsonx_governance
