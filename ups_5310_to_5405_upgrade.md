@@ -201,7 +201,7 @@ Based on the health check review, no action should be required for these steps
 | NVIDIA GPU Operator | 26.3.x | 26.3.x | No action required |
 | Node Feature Discovery | 4.20.0 | 4.20.x | No action required |
 | IBM Events Operator | 6.0.0 | 6.1.1 | Upgrade required |
-| OpenShift Logging | n/a | n/a | Upgrade required for ODS |
+| OpenShift Logging | 6.3.4 | 6.3.x | Upgrade required for ODS |
 
 ---
 
