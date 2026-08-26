@@ -8,7 +8,7 @@ OCP: 4.20.25
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: Air-gapped
 Private container registry: Yes
-Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
+Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,analyticsengine,db2oltp,cognos_analytics
 ```
 
 **To:**
@@ -18,7 +18,7 @@ OCP: 4.20.25
 Storage: Google Cloud Netapp Volumes and Persistent Disk on Google Cloud
 Internet: Air-gapped
 Private container registry: Yes
-Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
+Components: ibm-licensing,ibm_events_operator,ccs,cpfs,zen,cpd_platform,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,analyticsengine,db2oltp,cognos_analytics
 ```
 
 ---
