@@ -1587,7 +1587,7 @@ oc patch dataprotectionapplication ${DPA_NAME} \
   {
     "op": "replace",
     "path": "/spec/configuration/velero/customPlugins",
-    "value": \[ 
+    "value": [ 
       { 
         "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs/cpfs-oadp-plugins:latest", 
         "name": "cpfs-oadp-plugin" 
@@ -1604,7 +1604,7 @@ oc patch dataprotectionapplication ${DPA_NAME} \
         "image": "${PRIVATE_REGISTRY_LOCATION}/db2u/db2u-velero-plugin:${VERSION}",
         "name": "db2u-velero-plugin" 
       } 
-    \]
+    ]
   }
 ]'
 ```
