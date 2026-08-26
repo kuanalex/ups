@@ -264,6 +264,18 @@ oc get pods -n ${PROJECT_LICENSE_SERVICE}
 
 **Reference**: [Updating cluster-scoped resources for the instance](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=puish-updating-cluster-scoped-resources-instance)
 
+Generate cluster-scoped resources for the br_orchestration service
+```bash
+cpd-cli manage case-download --components=br_orchestration --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_INST_BR_SVC} --br_operator_ns=${PROJECT_INST_BR_SVC} --cluster_resources=true
+```
+
+Run the 'oc apply -f' command returned in the terminal, for example
+```bash
+oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+```
+
+---
+
 Generate cluster-scoped resources for the instance
 ```bash
 cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --cluster_resources=true
