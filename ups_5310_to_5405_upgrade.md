@@ -201,6 +201,7 @@ Based on the health check review, no action should be required for these steps
 | NVIDIA GPU Operator | 26.3.x | 26.3.x | No action required |
 | Node Feature Discovery | 4.20.0 | 4.20.x | No action required |
 | IBM Events Operator | 6.0.0 | 6.1.1 | Upgrade required |
+| OpenShift Logging | n/a | n/a | Upgrade required for ODS |
 
 ---
 
@@ -1420,16 +1421,60 @@ Monitor cognos_analytics upgrade
 watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get caservices ca-addon-cr -o yaml | grep progress'
 ```
 
+Check the Cognos analytics custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=cognos_analytics
 ```
 
 ---
 
+#### Potential Issue - Cognos post-ca-translations-job pod ImagePullBackOff errors
+
+Post upgrade of the cognos_analytics service, you may find a post-ca-translations-job and it's corresponding pod in error
+```bash
+oc get job | grep post-ca-translations
+post-ca-translations-job   ImagePullBackOff   0/1
+
+oc get po |  grep post-ca-translations
+post-ca-translations-job-2kcwg   ImagePullBackOff   0/1
+```
+
+The describe of the pod yields various manifest unknown errors
+```bash
+cp.icr.io/cp/cpd/ca-cpd-addon-translation@sha256:347d49e0e6c457ab5d2fe353c8dec7e6ea01dc7159193753b62396fd0ed69a64: reading manifest
+sha256:347d49e0e6c457ab5d2fe353c8dec7e6ea01dc7159193753b62396fd0ed69a64 in cp.icr.io/cp/cpd/ca-cpd-addon-translation: manifest unknown; artifact err: get manifest: build image source:
+reading manifest sha256:347d49e0e6c457ab5d2fe353c8dec7e6ea01dc7159193753b62396fd0ed69a64 in cp.icr.io/cp/cpd/ca-cpd-addon-translation: manifest unknown
+```
+
+Obtain the correct image digest from the cloud-pak github repo
+```bash
+https://github.com/IBM/cloud-pak/blob/master/repo/case/ibm-cognos-analytics-prod/30.0.4%2B20260721.161054.10660/OLM/images.txt
+```
+
+```bash
+cp.icr.io/cp/cpd/ca-cpd-addon-translation@sha256:8a7920108d14c5d617e0f187fc01bd08e19dd6b88a4e2c07c5f1dbb41aadd970
+```
+
+Patch the caservice-cr within the spec/hotfix_digests/ca_cpd_addon_translation section with the above image digest
+```bash
+oc patch caservice ca-addon-cr -n cpd-instance --type merge \
+  -p '{
+    "spec": {
+      "hotfix_digests": {
+        "ca_cpd_addon_translation": "sha256:8a7920108d14c5d617e0f187fc01bd08e19dd6b88a4e2c07c5f1dbb41aadd970"
+      }
+    }
+  }'
+```
+
+Recycle the post-ca-translations-job pod and monitor the new pod spins up with the updated image
+
+---
+
 
 ## Upgrade Service Instances
 
-After upgrading service CRs, some services require additional instance upgrades
+After upgrading service custom resources, some services require additional instance upgrades
 
 **Reference**: [Creating a CPD profile](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=cli-creating-cpd-profile)
 
