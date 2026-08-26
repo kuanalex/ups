@@ -1683,28 +1683,13 @@ Give the ${BR_OPERATOR_JOB_SA} service account the edit cluster role on the requ
 ```bash
 # Assign the edit role in the operators project
 # =======================================================================================
-oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
---clusterrole=edit \
---serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} \
--n ${PROJECT_CPD_INST_OPERATORS}
-
-oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
--n ${PROJECT_CPD_INST_OPERATORS} \
-component-id=br-orchestration \
-icpdsupport/addOnId=bros
+oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} --clusterrole=edit --serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} -n ${PROJECT_CPD_INST_OPERATORS}
+oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} -n ${PROJECT_CPD_INST_OPERATORS} component-id=br-orchestration icpdsupport/addOnId=bros
 
 # Assign the edit role in the operands project
 # =======================================================================================
-oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
---clusterrole=edit \
---serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} \
--n ${PROJECT_CPD_INST_OPERANDS}
-
-
-oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} \
--n ${PROJECT_CPD_INST_OPERANDS} \
-component-id=br-orchestration \
-icpdsupport/addOnId=bros
+oc create rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} --clusterrole=edit --serviceaccount=${PROJECT_INST_BR_SVC}:${BR_OPERATOR_JOB_SA} -n ${PROJECT_CPD_INST_OPERANDS}
+oc label rolebinding bros-job-sa-rb-${BR_OPERATOR_JOB_SA} -n ${PROJECT_CPD_INST_OPERANDS} component-id=br-orchestration icpdsupport/addOnId=bros
 
 if [ -n "${PROJECT_CPD_INSTANCE_TETHERED_LIST}" ]; then
     IFS=',' read -ra TETHERED_NS_LIST <<< "${PROJECT_CPD_INSTANCE_TETHERED_LIST}"
