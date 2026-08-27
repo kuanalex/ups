@@ -252,6 +252,7 @@ oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resou
 Generate cluster-scoped resources for the instance
 ```bash
 cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --cluster_resources=true
+cpd-cli manage case-download  --components=${COMPONENTS} --release=${VERSION} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --br_operator_ns=${PROJECT_INST_BR_SVC} --cluster_resources=true
 ```
 
 Run the 'oc apply -f' command returned in the terminal, for example
@@ -1245,7 +1246,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_governance upgrade
 ```bash
-watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get woservice,Db2aaserviceService,openpagesinstances,watsonxgovernance'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get woservice,Db2aaserviceService,openpagesinstances,watsonxaiifm,watsonxgovernance'
 ```
 
 Check the watsonx governance custom resource stauts
