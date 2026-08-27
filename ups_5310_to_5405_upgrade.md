@@ -78,40 +78,12 @@ export PROJECT_SCHEDULING_BR_SVC=ibm-cpd-scheduler-br-svc
 export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
 export BACKUP_NAME=online-backup-$(date '+%Y%m%d-%H%M%S')
 export RESTORE_NAME=${BACKUP_NAME}-restore
-export OADP_PROJECT=<enter your OADP project>
-# export OADP_VERSION=<OADP-version>
+export OADP_PROJECT=openshift-adp
 export NODE_AGENT_POD_CPU_LIMIT=500m
 export KOPIA_POD_CPU_LIMIT=1
-# export PROJECT_FUSION=ibm-spectrum-fusion-ns
-# export PROJECT_PX_ADMIN_NS=<No default>
-# export PROJECT_NETAPP_TRIDENT_PROTECT=trident-protect
-# export NETAPP_TRIDENT_PROTECT_APP_VAULT=<AppVault name>
+export PROJECT_FUSION=ibm-spectrum-fusion-ns
 export BR_OPERATOR_JOB_SA=bros-job-sa
 export BR_OPERATOR_SA=bros-sa
-# export PROJECT_INST_BR_SVC_NEW=${PROJECT_CPD_INST_OPERATORS_NEW}-br-svc
-# export PROJECT_CPD_INST_OPERATORS_NEW=<project-name>
-# export OPERATOR_MAPPING=${PROJECT_CPD_INST_OPERATORS}:${PROJECT_CPD_INST_OPERATORS_NEW}
-# export PROJECT_CPD_INST_OPERANDS_NEW=<project-name>
-# export OPERAND_MAPPING=${PROJECT_CPD_INST_OPERANDS}:${PROJECT_CPD_INST_OPERANDS_NEW}
-# export PROJECT_CPD_INSTANCE_TETHERED_1=<project-name>
-# export PROJECT_CPD_INSTANCE_TETHERED_1_NEW=<project-name>
-# export TETHER_MAPPING_1=${PROJECT_CPD_INSTANCE_TETHERED_1}:${PROJECT_CPD_INSTANCE_TETHERED_1_NEW}
-# export PROJECT_CPD_INSTANCE_TETHERED_2=<project-name>
-# export PROJECT_CPD_INSTANCE_TETHERED_2_NEW=<project-name>
-# export TETHER_MAPPING_2=${PROJECT_CPD_INSTANCE_TETHERED_2}:${PROJECT_CPD_INSTANCE_TETHERED_2_NEW}
-# export PROJECT_CPD_INSTANCE_TETHERED_LIST_NEW=${PROJECT_CPD_INSTANCE_TETHERED_1_NEW},${PROJECT_CPD_INSTANCE_TETHERED_2_NEW}
-# export RESTORE_PROJECT_MAPPING="${OPERATOR_MAPPING},${OPERAND_MAPPING}"
-# export RESTORE_PROJECT_MAPPING="${OPERATOR_MAPPING},${OPERAND_MAPPING},${TETHER_MAPPING_1},${TETHER_MAPPING_2}"
-
-# ------------------------------------------------------------------------------
-# S3 Object Storage
-# ------------------------------------------------------------------------------
-export S3_URL=<S3-url>
-export REGION=<S3-region>
-export BUCKET_NAME=<bucket-name>
-export BUCKET_PREFIX=<bucket-prefix>
-export ACCESS_KEY_ID=<access-key-ID>
-export SECRET_ACCESS_KEY=<access-key-secret>
 ```
 
 Add the br_orchestration component after the cpd_platform component, for example
