@@ -1273,7 +1273,7 @@ cpd-cli manage install-components \
 
 Monitor watsonx_governance upgrade
 ```bash
-watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get Db2aaserviceService,openpagesinstances,watsonxgovernance'
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get woservice,Db2aaserviceService,openpagesinstances,watsonxgovernance'
 ```
 
 Check the watsonx governance custom resource stauts
