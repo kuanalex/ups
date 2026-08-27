@@ -252,7 +252,6 @@ oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resou
 Generate cluster-scoped resources for the instance
 ```bash
 cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --cluster_resources=true
-cpd-cli manage case-download  --components=${COMPONENTS} --release=${VERSION} --operator_ns=${PROJECT_CPD_INST_OPERATORS} --br_operator_ns=${PROJECT_INST_BR_SVC} --cluster_resources=true
 ```
 
 Run the 'oc apply -f' command returned in the terminal, for example
