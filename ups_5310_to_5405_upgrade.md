@@ -487,9 +487,13 @@ Create the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace
 # ............................................................................
 non_olm:
   watsonxOrchestrate:
+    size: large
     installMode: "agentic_assistant"
     watsonxAI:
       watsonxaiifm: true
+      ootbModels:
+        - ibm-slate-30m-english-rtrvr
+        - gpt-oss-120b
 ```
 
 **IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests from watsonxaiifm-cr
