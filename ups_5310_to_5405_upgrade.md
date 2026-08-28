@@ -587,6 +587,29 @@ wo-watson-orchestrate-postgresedb-4                               1/1     Runnin
 
 ---
 
+#### Potential Issue - Document Processing Operator pod stuck in CrashLoopBackOff
+
+Update the memory values by patching the deployment
+```bash
+oc patch deployment ibm-documentprocessing-operator \
+  -n ups-wx-operators \
+  --type=json \
+  -p='[
+    {
+      "op": "replace",
+      "path": "/spec/template/spec/containers/0/resources/limits/memory",
+      "value": "2Gi"
+    },
+    {
+      "op": "replace",
+      "path": "/spec/template/spec/containers/0/resources/requests/memory",
+      "value": "1Gi"
+    }
+  ]'
+```
+
+---
+
 #### Potential Issue - Orchestrate custom resource stuck at 97% - Deploying Milvus
 
 During a test upgrade, Orchestrate got stuck during the Milvus deployment
