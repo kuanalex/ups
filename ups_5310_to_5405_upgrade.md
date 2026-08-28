@@ -1776,7 +1776,7 @@ fi
 
 WxO development team to provide the new procedure to enable WxO Observability
 
-**Previous runbook**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
+**Reference**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
 
 ---
 
@@ -1784,7 +1784,7 @@ WxO development team to provide the new procedure to enable WxO Observability
 
 Follow the procedure in the following known issue document to resolve platform-auth-service pod in ContainerStatusUnknown issue
 
-**Previous runbook**: [Enabling the debug trace for the platform-auth-service cause pod in ContainerStatusUnknown state and repeatedly get evicted](https://www.ibm.com/mysupport/s/defect/aCIgJ000000C9qjWAC/dt467023?language=en_US)
+**Reference**: [Enabling the debug trace for the platform-auth-service cause pod in ContainerStatusUnknown state and repeatedly get evicted](https://www.ibm.com/mysupport/s/defect/aCIgJ000000C9qjWAC/dt467023?language=en_US)
 
 ---
 
