@@ -1788,6 +1788,14 @@ Follow the procedure in the following known issue document to resolve platform-a
 
 ---
 
+#### Potential Issue - Enabling Watson Speech services to process API requests on multiple clusters
+
+You can configure Watson Speech services for an active-active multi-cluster deployment, enabling API requests to be processed across multiple clusters
+
+**Reference**: [Enabling Watson Speech services to process API requests on multiple clusters](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pis-enabling-watson-speech-services-process-api-requests-multiple-clusters)
+
+---
+
 #### General validation steps
 
 Check CR status
