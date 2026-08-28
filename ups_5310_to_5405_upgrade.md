@@ -246,7 +246,7 @@ cpd-cli manage case-download --components=br_orchestration --release=${VERSION} 
 
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
-oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+oc apply -f cluster_scoped_resources.yaml --server-side --force-conflicts
 ```
 
 ---
@@ -258,7 +258,7 @@ cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --p
 
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
-oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+oc apply -f cluster_scoped_resources.yaml --server-side --force-conflicts
 ```
 
 ---
