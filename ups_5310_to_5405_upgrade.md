@@ -37,7 +37,7 @@ The image mirroring completed successfully [Mirroring images to private image re
 
 Here is an example of the case-download syntax
 ```bash
-cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=0 --from_oci=true
+cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --patch_id=${PATCH_ID} --from_oci=true
 ```
 
 Remember to download the CASE package for the ibm_events_operator component as well
