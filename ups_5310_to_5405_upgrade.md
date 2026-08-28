@@ -539,6 +539,8 @@ NAME                                AGE   INSTANCES   READY   STATUS            
 wo-watson-orchestrate-postgresedb   19d   3           2       Waiting for the instances to become active   wo-watson-orchestrate-postgresedb-2
 ```
 
+Note that wo-watson-orchestrate-postgresedb-2 is the PRIMARY replica in this scenario
+
 Check the status of the orchestrate-postgresedb replica pods
 ```bash
 wo-watson-orchestrate-postgresedb-3     0/1     CrashLoopBackOff
@@ -555,14 +557,23 @@ Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
 {"level":"info","ts":"2026-08-20T04:25:14.355509372Z","logger":"postgres","msg":"record","logging_pod":"wo-watson-orchestrate-postgresedb-3","record":{"log_time":"2026-08-20 04:25:14.355 UTC","user_name":"postgres","database_name":"postgres","process_id":"37","connection_from":"[local]","session_id":"6a8681aa.25","session_line_num":"1","session_start_time":"2026-08-20 04:25:14 UTC","transaction_id":"0","error_severity":"FATAL","sql_state_code":"57P03","message":"the database system is starting up","backend_type":"client backend","query_id":"0"}}
 ```
 
+---
+
 Similar issue is reported in CSP ticket - TS022632926
 
-Delete the broken replica pod and pvc using the cnp plug-in
+---
+
+Download and configure the kubectl-cnp plug-in
+```bash
+curl -sSfL https://github.com/EnterpriseDB/kubectl-cnp/raw/main/install.sh | sudo sh -s -- -b /usr/local/bin
+```
+
+Delete the broken replica pod and pvc using the cnp plug-in, for example (DO NOT DESTROY THE PRIMARY REPLICA...)
 ```bash
 oc cnp destroy wo-watson-orchestrate-postgresedb wo-watson-orchestrate-postgresedb-3 -n cpd-instance
 ```
 
-This should fix the broken replica pod shortly after and unblock the upgrade
+This should replace the broken replica pod with a new replica and unblock the migration shortly
 ```bash
 oc get po | grep postgresedb 
 wo-watson-orchestrate-postgresedb-1                               1/1     Running             0             3m40s
@@ -1049,6 +1060,8 @@ wo     5.4.2     45         45         45      agentic_assistant   NOT_QUIESCED 
 wget -O check_orchestrate_health_v12.sh https://raw.githubusercontent.com/watson-developer-cloud/community/master/watsonx-orchestrate/scripts/check_orchestrate_health_v12.sh ; sh check_orchestrate_health_v12.sh -t
 ```
 
+---
+
 Post upgrade of orchestrate, remove the 'wo.watsonx.ibm.com/hands-off' annotation from Orchestrate rediscp
 ```bash
 oc get rediscp wo-watson-orchestrate-rediscp -oyaml
@@ -1059,21 +1072,22 @@ metadata:
     wo.watsonx.ibm.com/hands-off: "yes" -- ***this needs to be removed***
 ```
 
-Make sure to add the resource configurations from rediscp instance in the 5.4.2 wo custom resource
+Make sure to add the resource configurations from rediscp instance in the 5.4.2 wo custom resource within the spec section
 ```bash
-  redis_resources:
-    limits:
-      cpu: "2"
-      ephemeral-storage: 1Gi
-      memory: 50Gi
-    requests:
-      cpu: "1"
-      ephemeral-storage: 10Mi
-      memory: 40Gi
-  persistentVolume:
-    accessModes:
-    - ReadWriteOnce
-    size: 150Gi
+spec:
+    redis_resources:
+      limits:
+        cpu: "2"
+        ephemeral-storage: 1Gi
+        memory: 50Gi
+      requests:
+        cpu: "1"
+        ephemeral-storage: 10Mi
+        memory: 40Gi
+    persistentVolume:
+      accessModes:
+      - ReadWriteOnce
+      size: 150Gi
 ```
 
 ---
@@ -1108,13 +1122,13 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 #### Potential Issue  - OOMKilled on `install-and-reconsile` job
 
-During prod-east upgrade to 5.3.1 patch 0 an issue was encountered with the 'install-and-reconsile' job during Watsonx AI upgrade
+During Prod-East upgrade to 5.3.1 patch 0, an issue was encountered with the 'install-and-reconsile' job during watsonx_ai upgrade
 
 The `wml-install-and-reconsile` job reached its backofflimit of 6 because all 6 job start ups failed due to OOMKilled
 
-This caused the `wml-cr` on the `wmlbases` resource to become stuck during the watsonX AI upgrade
+This caused the `wml-cr` on the `wmlbase` resource to become stuck during the watsonx_ai upgrade
 
-The `wml-cr` on the `wmlbases` resource would not move past this stuck state at 87.5% and `InProgress` status, since it was waiting for this job to complete
+The `wml-cr` on the `wmlbase` resource would not move past this stuck state at 87.5% and `InProgress` status, since it was waiting for this job to complete
 
 Container information and log output can be found below
 ```bash
@@ -1136,6 +1150,7 @@ Container information and log output can be found below
       memory:             350Mi
 ```
 
+Logs recorded at the time
 ```bash
 Python version :3.11.13 (main, Jan 16 2026, 00:00:00) [GCC 11.5.0 20240719 (Red Hat 11.5.0-11)]
 2026/05/30 17:44:18,067|INFO|upgrade_or_rollback_deployments.py:133: Capturing pre-upgrade runtime details...
@@ -1144,7 +1159,7 @@ Python version :3.11.13 (main, Jan 16 2026, 00:00:00) [GCC 11.5.0 20240719 (Red 
 [ERROR]:
 ```
 
-To resolve the issue, delete the job, restart the WML operator and injected new memory values into the Operator files using the following script during the startup of the reconcile
+The workaround used at the time was to delete the job, restart the WML operator, and inject new memory values into the operator using the following script during the startup of the reconcile
 ```bash
 OP_NS=ups-wx-operators
 OP_LABEL='name=ibm-cpd-wml-operator'
@@ -1193,9 +1208,7 @@ done
 echo "Done. Patched pod: $NEW_POD"
 ```
 
-This loaded the higher memory into the job defention and allowed us to pass through the initial job
-
-Recommended that support needs to look into this with larger enviroments
+This loaded the higher memory into the job definition and unblocked the wml upgrade
 
 Check the watsonxai custom resource status
 ```bash
@@ -1206,7 +1219,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Watsonx Governance
 
-Create the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace/work directory
+Update the install-options.yml file in the cpd-cli-workspace/olm-utils-workspace/work directory
 ```bash
 ---
 # ............................................................................
@@ -1225,7 +1238,7 @@ non_olm:
 #     dbSecretName: <secret-name>
 ```
 
-Remove the image_digests section from woservice aiopenscale custom resource
+Review and remove the image_digests section from woservice aiopenscale custom resource
 ```bash
 oc patch woservice aiopenscale -n ups-wx-operands --type='json' -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
@@ -1259,7 +1272,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Watson Speech
 
-Upgrade watson speech
+Upgrade Watson speech
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1284,7 +1297,7 @@ Check the watson_speech custom resource status
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watson_speech
 ```
 
-After upgrading speech update the speech-cr as follows
+After upgrading speech update the speech-cr, adding this doNotManage section
 ```bash
 spec:
   global:
@@ -1420,7 +1433,7 @@ sha256:347d49e0e6c457ab5d2fe353c8dec7e6ea01dc7159193753b62396fd0ed69a64 in cp.ic
 reading manifest sha256:347d49e0e6c457ab5d2fe353c8dec7e6ea01dc7159193753b62396fd0ed69a64 in cp.icr.io/cp/cpd/ca-cpd-addon-translation: manifest unknown
 ```
 
-Obtain the correct image digest from the cloud-pak github repo
+Verify and obtain the correct image digest from the cloud-pak github repo
 ```bash
 https://github.com/IBM/cloud-pak/blob/master/repo/case/ibm-cognos-analytics-prod/30.0.4%2B20260721.161054.10660/OLM/images.txt
 ```
