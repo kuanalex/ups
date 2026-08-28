@@ -74,16 +74,13 @@ export PATCH_ID=5
 # ------------------------------------------------------------------------------
 # Backup and restore 
 # ------------------------------------------------------------------------------
-export PROJECT_SCHEDULING_BR_SVC=ibm-cpd-scheduler-br-svc
-export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
-export BACKUP_NAME=online-backup-$(date '+%Y%m%d-%H%M%S')
-export RESTORE_NAME=${BACKUP_NAME}-restore
-export OADP_PROJECT=openshift-adp
-export NODE_AGENT_POD_CPU_LIMIT=500m
-export KOPIA_POD_CPU_LIMIT=1
 export PROJECT_FUSION=ibm-spectrum-fusion-ns
+export OADP_PROJECT=ibm-backup-restore
+export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
 export BR_OPERATOR_JOB_SA=bros-job-sa
 export BR_OPERATOR_SA=bros-sa
+# export NODE_AGENT_POD_CPU_LIMIT=500m
+# export KOPIA_POD_CPU_LIMIT=1
 ```
 
 Add the br_orchestration component after the cpd_platform component, for example
