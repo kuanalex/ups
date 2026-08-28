@@ -125,6 +125,11 @@ Take a backup of the routes
 oc get routes -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > routes_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
 
+Validate 'expose:external-regional' label in the cpd route, add the label "expose:external-regional" to your cpd-route as required
+```bash
+oc get route cpd -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -A 20 labels
+```
+
 Take a backup of the temporary patches for watson assistant
 ```bash
 oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
@@ -161,14 +166,14 @@ Some services require additional prerequisite software upgrades
 
 **Reference**: [Upgrading Red Hat OpenShift AI](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=ups-upgrading-red-hat-openshift-ai)
 
-Based on the health check review, no action should be required for these steps
+Action should only be required for OpenShift Serverless, IBM Events Operator, OpenShift Logging (for ODS)
 
 | Operator | Current CSV | Target for 5.4.0 | Action |
 | --- | --- | --- | --- |
-| OpenShift Serverless | 1.37.1 | 1.37.1 | No action required |
 | OpenShift AI (RHOAI) | 2.25.9 | 2.25.x | No action required |
 | NVIDIA GPU Operator | 26.3.x | 26.3.x | No action required |
 | Node Feature Discovery | 4.20.0 | 4.20.x | No action required |
+| OpenShift Serverless | 1.37.1 | 1.37.1 | Generate the required custom resource definitions for the IBM Events Operator |
 | IBM Events Operator | 6.0.0 | 6.1.1 | Upgrade required |
 | OpenShift Logging | 6.3.4 | 6.3.x | Upgrade required for ODS |
 
@@ -1762,7 +1767,7 @@ cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 
 Validate 'expose:external-regional' label in the cpd route, add the label "expose:external-regional" to your cpd-route as required
 ```bash
-oc get route cpd -o yaml
+oc get route cpd -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -A 20 labels
 ```
 
 ---
