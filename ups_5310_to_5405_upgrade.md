@@ -77,8 +77,8 @@ export PATCH_ID=5
 export PROJECT_FUSION=ibm-spectrum-fusion-ns
 export OADP_PROJECT=ibm-backup-restore
 export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
-# export BR_OPERATOR_JOB_SA=bros-job-sa
-# export BR_OPERATOR_SA=bros-sa
+export BR_OPERATOR_JOB_SA=bros-job-sa
+export BR_OPERATOR_SA=bros-sa
 # export NODE_AGENT_POD_CPU_LIMIT=500m
 # export KOPIA_POD_CPU_LIMIT=1
 ```
