@@ -552,7 +552,7 @@ wo-watson-orchestrate-postgresedb-3     0/1     CrashLoopBackOff
 
 Check the logs of the replica(s) in CrashLoopBackOff
 ```bash
-oc logs wo-watson-orchestrate-postgresedb-3 -n cpd-instance --tail=50 | grep FATAL
+oc logs wo-watson-orchestrate-postgresedb-3 -n ${PROJECT_CPD_INST_OPERANDS} --tail=50 | grep FATAL
 ```
 
 Output
@@ -574,7 +574,7 @@ curl -sSfL https://github.com/EnterpriseDB/kubectl-cnp/raw/main/install.sh | sud
 
 Delete the broken replica pod and pvc using the cnp plug-in, for example (DO NOT DESTROY THE PRIMARY REPLICA...)
 ```bash
-oc cnp destroy wo-watson-orchestrate-postgresedb wo-watson-orchestrate-postgresedb-3 -n cpd-instance
+oc cnp destroy wo-watson-orchestrate-postgresedb wo-watson-orchestrate-postgresedb-3 -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
 This should replace the broken replica pod with a new replica and unblock the migration shortly
@@ -621,7 +621,7 @@ wo     5.4.0     Patch 5 (8.0.2)   InProgress   milvus                45/45     
 
 Review the status messages in the Milvus custom resource
 ```bash
-oc get wxdengine wo-milvus -n cpd-instance -o yaml | grep -A 10 status:
+oc get wxdengine wo-milvus -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -A 10 status:
 ```
 
 Status/message:
@@ -674,7 +674,7 @@ apiVersion: operator.ibm.com/v1
 kind: IBMLicensingDefinition
 metadata:
   name: addonidwatsonxdata
-  namespace: cpd-instance
+  namespace: ${PROJECT_CPD_INST_OPERANDS}
   labels:
     icpdsupport/addOnId: watsonx_data
     icpdsupport/entitlement: watsonx-orchestrate
@@ -1471,7 +1471,7 @@ cp.icr.io/cp/cpd/ca-cpd-addon-translation@sha256:8a7920108d14c5d617e0f187fc01bd0
 
 Patch the caservice-cr within the spec/hotfix_digests/ca_cpd_addon_translation section with the above image digest
 ```bash
-oc patch caservice ca-addon-cr -n cpd-instance --type merge \
+oc patch caservice ca-addon-cr -n ${PROJECT_CPD_INST_OPERANDS} --type merge \
   -p '{
     "spec": {
       "hotfix_digests": {
