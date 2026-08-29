@@ -1063,7 +1063,7 @@ tail -f nohup.out
 
 Verify CR status and label
 ```bash
-oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep hotfix
+oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep -i hotfix
 ```
 
 Output should look like
