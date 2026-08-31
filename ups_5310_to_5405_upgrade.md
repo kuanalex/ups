@@ -674,7 +674,7 @@ apiVersion: operator.ibm.com/v1
 kind: IBMLicensingDefinition
 metadata:
   name: addonidwatsonxdata
-  namespace: ${PROJECT_CPD_INST_OPERANDS}
+  namespace: cpd-instance
   labels:
     icpdsupport/addOnId: watsonx_data
     icpdsupport/entitlement: watsonx-orchestrate
@@ -682,8 +682,8 @@ metadata:
     cloudpakId: "6341c0866cd24bb298037e1476bd4e56"
     cloudpakName: "IBM watsonx Orchestrate Cartridge"
     productID: "0be53fb8946d4b82a770f82d60f05657"
-    productName: "IBM watsonx Orchestrate"
     productMetric: "FREE"
+    productName: "IBM watsonx Orchestrate"
 spec:
   action: modifyOriginal
   condition:
@@ -701,6 +701,8 @@ spec:
     productMetric: "FREE"
     productChargedContainers: ""
     productCloudpakRatio: ""
+    serviceId: ""
+    serviceName: ""
 EOF
 ```
 
