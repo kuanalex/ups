@@ -720,43 +720,90 @@ wo     5.4.0     Patch 5 (8.0.2)   True    All Deployed          45/45      45/4
 
 ---
 
-#### Potential Issue - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade (from 5.3.1 patch 0 upgrade)
+#### Post upgrade task 1 for Watsonx Orchestrate
 
-The ephemeralDeployment data type was updated from Boolean to String, and this required an edit on the wo-wa-data-governor-opensearch-ephemeral temporarypatch in this section
+Login to Red Hat OpenShift cluster
 ```bash
-spec:
-  apiVersion: assistant.watson.ibm.com/v1
-  kind: WatsonAssistant
-  name: wo-wa
-  patch:
-    data-governor:
-      datagovernoroverride:
-        spec:
-          dependencies:
-            opensearch:
-------------> ephemeralDeployment: true
+$OC_LOGIN
 ```
 
-Update the ephemeralDeployment value to a string
+Extract the current ATM server configuration from the Kubernetes secret
 ```bash
-oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral -n ups-wx-operands --type=merge -p '{"spec":{"patch":{"data-governor":{"datagovernoroverride":{"spec":{"dependencies":{"opensearch":{"ephemeralDeployment":"true"}}}}}}}}'
+kubectl get secret wo-agentic-task-manager-server-env \
+  -n cpd-instance-1 \
+-o jsonpath='{.data.\.secret\.env}' | base64 --decode | grep SERVER_INTERNAL
 ```
 
-Validate the patch updates
+Important: Store the value of SERVER_INTERNAL_HOSTNAME for later use, ensure that the value for SERVER_INTERNAL_PROTOCOL is set to https and SERVER_INTERNAL_PORT is set to 9045
 ```bash
-oc get patch wo-wa-data-governor-opensearch-ephemeral -o yaml
+SERVER_INTERNAL_PROTOCOL=https
+SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance-1.svc.cluster.local
+SERVER_INTERNAL_PORT=9045
+```
+
+Download and edit the [atm_endpoint_tls_migration.sql script](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=u-upgrading-from-version-53-18)
+```bash
+# Edit the configuration section (lines 6-7)
+vi /tmp/atm_endpoint_tls_migration.sql
+```
+
+Update the configuration values to match your environment by using the following commands
+```bash
+SET atm_migration.old_url = 'http://<SERVER_INTERNAL_HOSTNAME>:9044';
+SET atm_migration.new_url = 'https://<SERVER_INTERNAL_HOSTNAME>:9045';
+```
+
+Example configuration:
+```
+SET atm_migration.old_url = 'http://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9044';
+SET atm_migration.new_url = 'https://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9045';
+```
+
+To run the migration script on PostgreSQL database
+```bash
+POD_NAME=$(oc get pods -l "k8s.enterprisedb.io/instanceName=wo-watson-orchestrate-postgresedb-1" -o jsonpath='{.items[0].metadata.name}')
+DATABASE_NAME="archer"
+
+oc exec -i $POD_NAME -- psql -U postgres -d $DATABASE_NAME < /tmp/atm_endpoint_tls_migration.sql
+```
+
+Run the following verification queries to validate the migration status
+```bash
+oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
+SELECT COUNT(*) as remaining_tools FROM tools 
+WHERE binding::text LIKE '%wo-agentic-task-manager%' 
+AND binding::text LIKE '%:9044%'; 
+SELECT COUNT(*) as remaining_tool_versions FROM tool_version 
+WHERE binding::text LIKE '%wo-agentic-task-manager%' 
+AND binding::text LIKE '%:9044%';"
+```
+
+Expected results
+```bash
+- `remaining_tools`: 0
+- `remaining_tool_versions`: 0
+```
+
+To clean up the migration log, run the following commands
+```bash
+oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
+-- Verify migration log entry
+SELECT * FROM migration_log
+WHERE migration_name = 'atm_endpoint_tls_migration_5_3_1';
+"
+```
+
+Drop the migration_log table only after successful verification.
+```bash
+oc exec $POD_NAME -- psql -U postgres -d $DATABASE_NAME -c "
+-- Drop the migration_log table 
+DROP TABLE IF EXISTS migration_log;
+"
 ```
 
 ---
 
-Check the watsonx_orchestrate custom resource status
-```bash
-cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_orchestrate
-```
-
----
-
-#### Post upgrade tasks for Watsonx Orchestrate
+#### Post upgrade task 2 for Watsonx Orchestrate
 
 After completing this migration, follow the steps for 'Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0'
 
