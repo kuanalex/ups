@@ -508,6 +508,16 @@ Remove the image.digestOverrides from the wo custom resource
 oc patch wo wo -n ups-wx-operands --type=merge -p='{"spec": {"image": {"digestOverrides": null}}}'
 ```
 
+If applicable, remove the 'wo.watsonx.ibm.com/hands-off' annotation from Orchestrate rediscp custom resource
+```bash
+oc get rediscp wo-watson-orchestrate-rediscp -oyaml
+apiVersion: redis.ibm.com/v1
+kind: Rediscp
+metadata:
+  annotations:
+    wo.watsonx.ibm.com/hands-off: "yes" -- ***this needs to be removed***
+```
+
 Upgrade watsonx_orchestrate
 ```bash
 cpd-cli manage install-components \
@@ -740,363 +750,9 @@ Daniel created the following hotfix script which resolves the 422 Forbidden vali
 
 It updates the parameter template from 10Gi to 100Gi directly inside a running IFM operator pod
 
-Create the workaround utility
+Confirm the script exists in this location on the bastion node and then run the IFM workaround script 
 ```bash
-vi ifm-inf-proxy-pvc-template-hotfix.sh
-```
-
-Copy the contents into the file
-```bash
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-# Temporary IFM operator workaround.
-#
-# Replaces this value in /opt/ansible/13.0.4/cpd_params.yaml.j2:
-#
-#   wx_inference_deployment:
-#     inf_proxy_pvc_size: 10Gi
-#
-# with:
-#
-#   wx_inference_deployment:
-#     inf_proxy_pvc_size: 100Gi
-#
-# The change is made inside the replacement operator pod and will be lost if
-# that pod is subsequently replaced. Remove this workaround when IBM provides
-# a supported, durable fix.
-
-OP_NS=${OP_NS:-ups-wx-operators}
-DEPLOY=${DEPLOY:-ibm-cpd-watsonx-ai-ifm-operator}
-TARGET_FILE=${TARGET_FILE:-/opt/ansible/13.0.4/cpd_params.yaml.j2}
-BACKUP_SUFFIX=.pre-temporary-ifm-inf-proxy-pvc-fix
-
-EXPECTED_OLD=10Gi
-EXPECTED_NEW=100Gi
-
-echo "===== Resolve IFM operator Deployment ====="
-
-if ! oc get deployment "$DEPLOY" -n "$OP_NS" >/dev/null 2>&1; then
-  echo "ERROR: Deployment $DEPLOY was not found in namespace $OP_NS."
-  echo "Override OP_NS or DEPLOY if the operator uses different values."
-  exit 1
-fi
-
-OP_SELECTOR=$(
-  oc get deployment "$DEPLOY" -n "$OP_NS" -o json |
-  jq -r '
-    .spec.selector.matchLabels
-    | to_entries
-    | map("\(.key)=\(.value)")
-    | join(",")
-  '
-)
-
-if [ -z "$OP_SELECTOR" ] || [ "$OP_SELECTOR" = "null" ]; then
-  echo "ERROR: Could not derive the pod selector from Deployment $DEPLOY."
-  exit 1
-fi
-
-echo "Namespace:  $OP_NS"
-echo "Deployment: $DEPLOY"
-echo "Selector:   $OP_SELECTOR"
-echo "File:       $TARGET_FILE"
-
-echo
-echo "===== Current operator pod ====="
-
-OLD_POD=$(
-  oc get pod -n "$OP_NS" -l "$OP_SELECTOR" -o json |
-  jq -r '
-    .items[]
-    | select(.metadata.deletionTimestamp == null)
-    | .metadata.name
-  ' |
-  head -1
-)
-
-if [ -z "$OLD_POD" ]; then
-  echo "ERROR: Current IFM operator pod was not found."
-  exit 1
-fi
-
-OLD_UID=$(oc get pod "$OLD_POD" -n "$OP_NS" -o jsonpath='{.metadata.uid}')
-
-echo "Old pod: $OLD_POD"
-echo "Old UID: $OLD_UID"
-
-echo
-echo "===== Preflight target validation ====="
-
-PREFLIGHT_RESULT=$(
-  oc exec -n "$OP_NS" "$OLD_POD" -- sh -c '
-    set -eu
-    file=$1
-
-    if [ ! -f "$file" ]; then
-      echo "ERROR:file-not-found"
-      exit 1
-    fi
-
-    old_count=$(
-      awk '\''
-        $0 == "wx_inference_deployment:" { in_section=1; next }
-        in_section && /^[^[:space:]]/ { in_section=0 }
-        in_section && /^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*10Gi[[:space:]]*$/ { count++ }
-        END { print count + 0 }
-      '\'' "$file"
-    )
-
-    new_count=$(
-      awk '\''
-        $0 == "wx_inference_deployment:" { in_section=1; next }
-        in_section && /^[^[:space:]]/ { in_section=0 }
-        in_section && /^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*100Gi[[:space:]]*$/ { count++ }
-        END { print count + 0 }
-      '\'' "$file"
-    )
-
-    if [ -w "$file" ]; then
-      writable=yes
-    else
-      writable=no
-    fi
-
-    printf "old_count=%s new_count=%s writable=%s\n" \
-      "$old_count" "$new_count" "$writable"
-  ' sh "$TARGET_FILE"
-)
-
-echo "$PREFLIGHT_RESULT"
-
-if [ "$PREFLIGHT_RESULT" = "old_count=0 new_count=1 writable=yes" ]; then
-  echo "The current operator pod already contains the requested 100Gi value."
-  echo "No pod was deleted and no file was changed."
-  exit 0
-fi
-
-if [ "$PREFLIGHT_RESULT" = "old_count=1 new_count=0 writable=no" ]; then
-  echo "ERROR: The target file is not writable by the operator container user."
-  echo "No pod was deleted."
-  exit 1
-fi
-
-if [ "$PREFLIGHT_RESULT" != "old_count=1 new_count=0 writable=yes" ]; then
-  echo "ERROR: Expected exactly one $EXPECTED_OLD value and no $EXPECTED_NEW value"
-  echo "inside wx_inference_deployment, and expected the file to be writable."
-  echo "No pod was deleted."
-  exit 1
-fi
-
-echo "PASS: Found exactly one target value: inf_proxy_pvc_size: $EXPECTED_OLD"
-
-echo
-echo "===== Delete old operator pod ====="
-
-oc delete pod "$OLD_POD" -n "$OP_NS" --wait=false
-
-echo
-echo "===== Wait for replacement pod ====="
-
-NEW_POD=""
-DEADLINE=$((SECONDS + 300))
-
-while [ "$SECONDS" -lt "$DEADLINE" ]; do
-  NEW_POD=$(
-    oc get pod -n "$OP_NS" -l "$OP_SELECTOR" -o json 2>/dev/null |
-    jq -r --arg OLD_UID "$OLD_UID" '
-      .items[]
-      | select(.metadata.uid != $OLD_UID)
-      | select(.metadata.deletionTimestamp == null)
-      | .metadata.name
-    ' |
-    head -1
-  )
-
-  if [ -n "$NEW_POD" ]; then
-    echo "Replacement pod created: $NEW_POD"
-    break
-  fi
-
-  echo "Still waiting for replacement pod..."
-  sleep 2
-done
-
-if [ -z "$NEW_POD" ]; then
-  echo "ERROR: Replacement operator pod was not created within five minutes."
-  exit 1
-fi
-
-echo
-echo "===== Wait until oc exec is available ====="
-
-EXEC_READY=false
-DEADLINE=$((SECONDS + 300))
-
-while [ "$SECONDS" -lt "$DEADLINE" ]; do
-  if oc exec -n "$OP_NS" "$NEW_POD" -- true >/dev/null 2>&1; then
-    EXEC_READY=true
-    break
-  fi
-
-  echo "Container is not yet accepting oc exec..."
-  sleep 2
-done
-
-if [ "$EXEC_READY" != true ]; then
-  echo "ERROR: Could not execute commands in $NEW_POD."
-  exit 1
-fi
-
-echo "Container is accepting oc exec."
-
-echo
-echo "===== Apply IFM template workaround ====="
-
-oc exec -n "$OP_NS" "$NEW_POD" -- sh -c '
-  set -eu
-
-  file=$1
-  backup_suffix=$2
-
-  if [ ! -f "$file" ]; then
-    echo "ERROR: Target file does not exist: $file"
-    exit 1
-  fi
-
-  if [ ! -w "$file" ]; then
-    echo "ERROR: Target file is not writable: $file"
-    echo "Container identity:"
-    id
-    echo "Target permissions:"
-    ls -ld "$(dirname "$file")" "$file"
-    exit 1
-  fi
-
-  count_value() {
-    expected=$1
-
-    awk -v expected="$expected" '\''
-      $0 == "wx_inference_deployment:" { in_section=1; next }
-      in_section && /^[^[:space:]]/ { in_section=0 }
-      in_section && $0 ~ "^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*" expected "[[:space:]]*$" { count++ }
-      END { print count + 0 }
-    '\'' "$file"
-  }
-
-  old_count=$(count_value 10Gi)
-  new_count=$(count_value 100Gi)
-
-  if [ "$old_count" -eq 0 ] && [ "$new_count" -eq 1 ]; then
-    echo "Target value is already 100Gi; no change is required."
-    exit 0
-  fi
-
-  if [ "$old_count" -ne 1 ] || [ "$new_count" -ne 0 ]; then
-    echo "ERROR: Refusing to modify an unexpected target state."
-    echo "old_count=$old_count new_count=$new_count"
-    exit 1
-  fi
-
-  backup_file="/tmp/$(basename "$file")${backup_suffix}"
-
-  if [ ! -e "$backup_file" ]; then
-    cp "$file" "$backup_file"
-    echo "Backup created: $backup_file"
-  else
-    echo "Backup already exists: $backup_file"
-  fi
-
-  temporary_file="/tmp/$(basename "$file").temporary-ifm-fix.$$"
-  trap '\''rm -f "$temporary_file"'\'' EXIT HUP INT TERM
-
-  awk '\''
-    $0 == "wx_inference_deployment:" {
-      in_section=1
-      print
-      next
-    }
-
-    in_section && /^[^[:space:]]/ {
-      in_section=0
-    }
-
-    in_section && /^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*10Gi[[:space:]]*$/ {
-      sub(/10Gi[[:space:]]*$/, "100Gi")
-      replacements++
-    }
-
-    { print }
-
-    END {
-      if (replacements != 1) {
-        exit 42
-      }
-    }
-  '\'' "$file" > "$temporary_file" || {
-    rc=$?
-    echo "ERROR: Failed to generate the patched file (rc=$rc)."
-    exit "$rc"
-  }
-
-  cat "$temporary_file" > "$file"
-  rm -f "$temporary_file"
-  trap - EXIT HUP INT TERM
-
-  old_count=$(count_value 10Gi)
-  new_count=$(count_value 100Gi)
-
-  if [ "$old_count" -ne 0 ] || [ "$new_count" -ne 1 ]; then
-    echo "ERROR: Post-change validation failed."
-    echo "old_count=$old_count new_count=$new_count"
-    exit 1
-  fi
-
-  echo "Changed exactly one value inside wx_inference_deployment:"
-  echo "  OLD: inf_proxy_pvc_size: 10Gi"
-  echo "  NEW: inf_proxy_pvc_size: 100Gi"
-
-  echo
-  echo "Final wx_inference_deployment section:"
-  awk '\''
-    $0 == "wx_inference_deployment:" { in_section=1 }
-    in_section && NR != start && /^[^[:space:]]/ && $0 != "wx_inference_deployment:" { exit }
-    in_section { print NR ":" $0; start=NR }
-  '\'' "$file"
-' sh "$TARGET_FILE" "$BACKUP_SUFFIX"
-
-PATCH_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-echo
-echo "Template patched at: $PATCH_TIME"
-
-echo
-echo "===== Wait for operator pod readiness ====="
-
-oc wait pod/"$NEW_POD" \
-  -n "$OP_NS" \
-  --for=condition=Ready \
-  --timeout=300s
-
-echo
-echo "===== Replacement operator pod ====="
-
-oc get pod "$NEW_POD" -n "$OP_NS" \
-  -o custom-columns='NAME:.metadata.name,UID:.metadata.uid,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount,STARTED:.status.containerStatuses[0].state.running.startedAt'
-
-echo
-echo "Temporary IFM workaround successfully applied."
-echo "Patched operator pod: $NEW_POD"
-echo "Patched file:         $TARGET_FILE"
-echo "Patch time:           $PATCH_TIME"
-echo
-echo "Do not restart or delete this operator pod; the in-container change is temporary."
-```
-
-Run the script
-```bash
-./ifm-inf-proxy-pvc-template-hotfix.sh
+/ibm/ifm-inf-proxy-pvc-template-hotfix-5.4.2.sh
 ```
 
 Monitor the ifm operator logs to ensure that the PVC issue is addressed
@@ -1142,7 +798,7 @@ oc patch mutatingwebhookconfiguration cpd-config-ac-webhook-cfg-ups-wx-operands 
   ]'
 ```
 
-Copy of custom ca secret
+Copy the contents of the custom ca secret to the wo custom secret
 ```bash
 NS=ups-wx-operands
 SOURCE_SECRET=cpd-custom-ca-certs
@@ -1163,6 +819,11 @@ jq \
     data: .data
   }' |
 oc create -f -
+```
+
+Expected result
+```bash
+mutatingwebhookconfiguration.admissionregistration.k8s.io/cpd-config-ac-webhook-cfg-ups-wx-operands patched
 ```
 
 Monitor the deployments for Orchestrate and ensure that all of the relevant pods are able to start properly
@@ -1590,16 +1251,6 @@ wget -O check_orchestrate_health_v12.sh https://raw.githubusercontent.com/watson
 
 ---
 
-Post upgrade of orchestrate, remove the 'wo.watsonx.ibm.com/hands-off' annotation from Orchestrate rediscp
-```bash
-oc get rediscp wo-watson-orchestrate-rediscp -oyaml
-apiVersion: redis.ibm.com/v1
-kind: Rediscp
-metadata:
-  annotations:
-    wo.watsonx.ibm.com/hands-off: "yes" -- ***this needs to be removed***
-```
-
 Make sure to add the resource configurations from rediscp instance in the 5.4.2 wo custom resource within the spec section
 ```bash
 spec:
@@ -1648,95 +1299,38 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 ---
 
-#### Potential Issue  - OOMKilled on `install-and-reconsile` job
+#### Potential Issue - WML PVC Sizing and Memory Issues
 
-During Prod-East upgrade to 5.3.1 patch 0, an issue was encountered with the 'install-and-reconsile' job during watsonx_ai upgrade
+During wx_ai upgrade, the WML operator can encounter an error related to PVC sizing and memory
 
-The `wml-install-and-reconsile` job reached its backofflimit of 6 because all 6 job start ups failed due to OOMKilled
-
-This caused the `wml-cr` on the `wmlbase` resource to become stuck during the watsonx_ai upgrade
-
-The `wml-cr` on the `wmlbase` resource would not move past this stuck state at 87.5% and `InProgress` status, since it was waiting for this job to complete
-
-Container information and log output can be found below
+Monitor the WML operator logs and yaml for similar symptoms as the previous IFM operator issue
 ```bash
-  Containers:
-   cleanup-hibernate:
-    Image:      us-docker.pkg.dev/gcp-dct-ccca-dev/ccca-d-image-registry/cp/cpd/wml-post-upgrade-cleanup-deployments@sha256:fa18900f8874755bc8c0cce9759384f5a5d5fa06a000c4d4ea8e01eec1d21f3c
-    Port:       <none>
-    Host Port:  <none>
-    Command:
-      /bin/sh
-      /opt/ibm/scripts/run_upgrade_or_rollback.sh
-    Limits:
-      cpu:                250m
-      ephemeral-storage:  200Mi
-      memory:             350Mi
-    Requests:
-      cpu:                250m
-      ephemeral-storage:  20Mi
-      memory:             350Mi
+oc logs ibm-cpd-wml-operator-6d5b5f795b-x258l -n ups-wx-operators | grep -i error
 ```
 
-Logs recorded at the time
+Monitor the WML operator yaml for similar symptoms
 ```bash
-Python version :3.11.13 (main, Jan 16 2026, 00:00:00) [GCC 11.5.0 20240719 (Red Hat 11.5.0-11)]
-2026/05/30 17:44:18,067|INFO|upgrade_or_rollback_deployments.py:133: Capturing pre-upgrade runtime details...
-2026/05/30 17:44:33,085|ERROR|upgrade_or_rollback_deployments.py:124:
-[COMMAND]: kubectl logs $(kubectl get pods --no-headers -o custom-columns=":metadata.name" -n ups-wx-operands | grep runtime-assemblies-operator) -n ups-wx-operands | grep "icpdsupport/addOnId=wml"
-[ERROR]:
+oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258l -n ups-wx-operators
 ```
 
-The workaround used at the time was to delete the job, restart the WML operator, and inject new memory values into the operator using the following script during the startup of the reconcile
+This script addresses Watson Machine Learning (WML) job memory exhaustion and undersized storage volumes by restarting the WML operator pod and modifying its internal templates to increase default job memory limits to 1Gi and PVC storage capacities to 100Gi
+
+Confirm the script exists in this location on the bastion node and then run the WML workaround script 
 ```bash
-OP_NS=ups-wx-operators
-OP_LABEL='name=ibm-cpd-wml-operator'
-
-echo "Current operator pod:"
-OLD_POD=$(oc get pod -n "$OP_NS" -l "$OP_LABEL" -o jsonpath='{.items[0].metadata.name}')
-echo "$OLD_POD"
-
-echo "Deleting old operator pod..."
-oc delete pod "$OLD_POD" -n "$OP_NS"
-
-echo "Waiting for new operator pod..."
-while true; do
-  NEW_POD=$(oc get pod -n "$OP_NS" -l "$OP_LABEL" \
-    --field-selector=status.phase=Running \
-    -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-
-  if [ -n "$NEW_POD" ] && [ "$NEW_POD" != "$OLD_POD" ]; then
-    READY=$(oc get pod "$NEW_POD" -n "$OP_NS" -o jsonpath='{.status.containerStatuses[0].ready}' 2>/dev/null)
-    if [ "$READY" = "true" ]; then
-      echo "New operator pod is ready: $NEW_POD"
-      break
-    fi
-  fi
-
-  echo "Still waiting..."
-  sleep 5
-done
-
-echo "Patching WML job templates from 350Mi to 1Gi..."
-oc exec -n "$OP_NS" "$NEW_POD" -- sh -c '
-for f in \
-/opt/ansible/5.4.0/roles/wml-base/templates/install-reconsile-cleanup-and-hibernate.yaml.j2 \
-/opt/ansible/5.4.0/roles/wml-base/templates/post-upgrade-cleanup-and-hibernate.yaml.j2 \
-/opt/ansible/5.4.0/roles/wml-base/templates/pre-upgrade-check-job.yaml.j2 \
-/opt/ansible/5.4.0/roles/wml-base/templates/preinstall-wml-runtime-definitions.yaml.j2 \
-/opt/ansible/5.4.0/roles/wml-base/templates/wml-shutdown-restart-runtimes.yaml.j2
-do
-  echo "===== $f ====="
-  cp "$f" "$f.bak"
-  sed -i "s/memory: \"350Mi\"/memory: \"1Gi\"/g" "$f"
-  grep -n "memory:" "$f" | head -20
-done
-'
-
-echo "Done. Patched pod: $NEW_POD"
+/ibm/wml-pvc-template-hotfix-COMPLETE-5.4.2.sh
 ```
 
-This loaded the higher memory into the job definition and unblocked the wml upgrade
+Monitor the WML operator logs to ensure that the PVC and memory issue(s) are addressed
+```bash
+oc logs ibm-cpd-wml-operator-6d5b5f795b-x258 -n ups-wx-operators
+```
+
+Check for any errors in the operator pod yaml directly
+```bash
+oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258 -n ups-wx-operators
+```
+
+---
 
 Check the watsonxai custom resource status
 ```bash
