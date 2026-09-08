@@ -1286,7 +1286,7 @@ oc apply -f wo-tenant-migration-job.yaml
 
 Monitor the status of the wo-tenant-migration-job job and the Orchestrate custom resource
 ```bash
-oc get wo wo-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
+oc get wo wo -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
 ```
 
 ---
