@@ -1384,9 +1384,9 @@ export PROJECT_CPD_INST_OPERANDS=ups-wx-operands
 
 **Note**: You will need to install Skopeo and mirror the operator and operand images before proceeding
 
-Create 5.4.2-Hotfix0.sh
+Create 5.4.2-Hotfix1.sh
 ```bash
-vi 5.4.2-Hotfix0.sh
+vi 5.4.2-Hotfix1.sh
 ```
 
 With the following contents
@@ -1414,7 +1414,7 @@ fi
 
 # Operator patch label configuration
 OPERATOR_PATCH_LABEL_KEY="${OPERATOR_PATCH_LABEL_KEY:-Hotfix}"
-OPERATOR_PATCH_LABEL_VALUE="${OPERATOR_PATCH_LABEL_VALUE:-5.4.2-Hotfix0}"
+OPERATOR_PATCH_LABEL_VALUE="${OPERATOR_PATCH_LABEL_VALUE:-5.4.2-Hotfix1}"
 WO_CR_NAME="wo"
 
 # Make sure oc login is done
@@ -1447,7 +1447,7 @@ log "   Current WXO version: $WXO_VERSION"
 
 if [[ "$WXO_VERSION" != "5.4.0" || "$CRVERSION" != "8.0.2" ]]; then
   log "ERROR: This operator patch can only be applied when:"
-  log "       WXO version  : 5.4.2"
+  log "       WXO version  : 5.4.0"
   log "       CR version   : 8.0.2"
   log ""
   log "Current versions:"
@@ -1460,8 +1460,8 @@ log "✅ Version check passed (8.0.2)"
 log ""
 
 # Hardcode images here when you do not want to pass them as script arguments.
-BOOTSTRAP_OPERATOR_IMAGE="icr.io/cpopen/ibm-watsonx-orchestrate-operator@sha256:0603789d433d9828e16191bbe0e5e1aa83af4d8cae31d415f155fec445842967"
-COMPONENT_OPERATOR_IMAGE="icr.io/cpopen/ibm-wxo-component-operator@sha256:55066ba89814afbb0e1b48fa1484aae18d49db45d61706e5ca06368c80dfc6ea"
+BOOTSTRAP_OPERATOR_IMAGE="icr.io/cpopen/ibm-watsonx-orchestrate-operator@sha256:10e41967b0e6e985169d42d94ab35710bb9cef0e83a13a040b4b5ee838c6ed3c"
+COMPONENT_OPERATOR_IMAGE="icr.io/cpopen/ibm-wxo-component-operator@sha256:2516e5b84db6cbca9357a268d454361fb6dac880d44c6bf8e2e6a634af1e6ade"
 
 if [[ $# -gt 1 ]]; then
   log "Usage: $0 [image1,image2,...]"
@@ -1641,6 +1641,237 @@ else
 fi
 
 # -----------------------------
+# uiproxy certificate fix
+# -----------------------------
+if oc get certificate wo-uiproxy-tls-icert \
+    -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+    DNS_NAMES=$(oc get certificate wo-uiproxy-tls-icert \
+        -n "${PROJECT_CPD_INST_OPERANDS}" \
+        -o jsonpath='{.spec.dnsNames[*]}' 2>/dev/null)
+    if echo "${DNS_NAMES}" | tr ' ' '\n' | grep -q '^wo-uiproxy-'; then
+        echo "Deleting wo-uiproxy-tls-icert due to an incorrect SAN entry. The operator will recreate it with the correct SAN."
+        oc delete certificate wo-uiproxy-tls-icert \
+            -n "${PROJECT_CPD_INST_OPERANDS}"
+    fi
+else
+    echo "Certificate wo-uiproxy-tls-icert not found. Skipping SAN validation."
+fi
+
+# -----------------------------
+# tenant migration jobs to run
+# -----------------------------
+if oc get job zen-addon-config-update-job -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+    echo "Found zen-addon-config-update-job. Deleting it..."
+    oc delete job zen-addon-config-update-job -n "${PROJECT_CPD_INST_OPERANDS}"
+else
+    echo "zen-addon-config-update-job not found. Nothing to delete."
+fi
+if oc get job wo-tenant-data-service-migration -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+    echo "Found wo-tenant-data-service-migration. Deleting it..."
+    oc delete job wo-tenant-data-service-migration -n "${PROJECT_CPD_INST_OPERANDS}"
+else
+    echo "wo-tenant-data-service-migration not found. Nothing to delete."
+fi
+
+# -----------------------------
+# watson-gateway fix
+# -----------------------------
+GW_SHA="sha256:ed87dfc283fd1bf29a078e5c91b20e86abd1fcd73dca89629a34d9ba7d826441"
+GW_TAG="2.4.0"
+
+# Hardcode gateway image here
+GATEWAY_OPERATOR_IMAGE="icr.io/cpopen/watson-gateway-operator@sha256:2faa51ae7c013a41db2dc09a9b971374e61b84f267cedd086243a912b93de435"
+
+if oc get deploy -n "$PROJECT_CPD_INST_OPERATORS" -lcomponent-id=watson-gateway >/dev/null 2>&1; then
+
+  GW_OPERATOR_DEPLOYMENT=$(oc get deploy -n "$PROJECT_CPD_INST_OPERATORS" -lcomponent-id=watson-gateway -o jsonpath='{.items[0].metadata.name}')
+  log "✅ Deployment '${GW_OPERATOR_DEPLOYMENT}' found."
+
+  # Backup deployment YAML before patching
+  BACKUP_FILE="${BACKUP_DIR}/${GW_OPERATOR_DEPLOYMENT}-$(date +%Y%m%d%H%M%S).yaml"
+  if oc -n "$PROJECT_CPD_INST_OPERATORS" get deploy "$GW_OPERATOR_DEPLOYMENT" -o yaml > "$BACKUP_FILE" 2>/dev/null; then
+    log "   Backed up deployment/$DEPLOYMENT → $BACKUP_FILE"
+  else
+    log "   WARNING: Failed to back up deployment/$GW_OPERATOR_DEPLOYMENT"
+  fi
+
+  CURRENT_IMAGE="$(oc get deploy "$GW_OPERATOR_DEPLOYMENT" -n "$PROJECT_CPD_INST_OPERATORS" \
+    -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+  log "✅ Match found. Patching deployment '$GW_OPERATOR_DEPLOYMENT'"
+  log "   Old: $CURRENT_IMAGE"
+  log "   New: $GATEWAY_OPERATOR_IMAGE"
+
+  if oc patch deploy "$GW_OPERATOR_DEPLOYMENT" -n "$PROJECT_CPD_INST_OPERATORS" \
+    --type='json' \
+    -p="[{
+      \"op\": \"replace\",
+      \"path\": \"/spec/template/spec/containers/0/image\",
+      \"value\": \"$GATEWAY_OPERATOR_IMAGE\"
+    }]"; then
+    log "🚀 Successfully patched $GW_OPERATOR_DEPLOYMENT"
+
+    # Patch the olm-utils configmap
+    BACKUP_FILE="${BACKUP_DIR}/olm-utils-cm-$(date +%Y%m%d%H%M%S).yaml"
+    oc get cm olm-utils-cm -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > "$BACKUP_FILE"
+    oc get cm olm-utils-cm -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | yq ".data.release_components_meta |= (fromyaml | .watson_gateway.cr_version = \"${GW_TAG}\" | to_yaml)" | oc apply -f -
+
+  else
+    log "✗ ERROR: Failed to patch $GW_OPERATOR_DEPLOYMENT"
+  fi
+  log ""
+
+  # Wait for rollout to complete
+  if oc -n "$PROJECT_CPD_INST_OPERATORS" rollout status deploy/"$GW_OPERATOR_DEPLOYMENT" --timeout=300s; then
+    # Check Ready/Desired replica ratio
+    RATIO="$(oc -n "$PROJECT_CPD_INST_OPERATORS" get deploy "$GW_OPERATOR_DEPLOYMENT" \
+      -o jsonpath='{.status.readyReplicas}/{.status.replicas}' 2>/dev/null || echo '0/0')"
+    log "   Ready/Desired: $RATIO"
+    
+    if [[ "$RATIO" == "1/1" ]] || [[ "$RATIO" == "2/2" ]]; then
+      log "   ✅ Deployment $GW_OPERATOR_DEPLOYMENT is healthy (pods up and running)"
+    else
+      log "   ⚠️  WARNING: Deployment $GW_OPERATOR_DEPLOYMENT is not at 1/1 or 2/2; current $RATIO"
+    fi
+  else
+    log "   ✗ ERROR: Rollout status for deployment/$GW_OPERATOR_DEPLOYMENT did not complete successfully"
+  fi
+
+  GW_DEPLOYMENT=$(oc get deploy -n "$PROJECT_CPD_INST_OPERANDS" -lcomponent=watson-gateway -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+
+  if [[ -n "$GW_DEPLOYMENT" ]]; then
+    log "✅ Deployment '${GW_DEPLOYMENT}' found. Restarting..."
+
+    oc -n "$PROJECT_CPD_INST_OPERANDS" rollout restart deploy/"$GW_DEPLOYMENT"
+    # Wait for rollout to complete
+    if oc -n "$PROJECT_CPD_INST_OPERANDS" rollout status deploy/"$GW_DEPLOYMENT" --timeout=300s; then
+      # Check Ready/Desired replica ratio
+      RATIO="$(oc -n "$PROJECT_CPD_INST_OPERANDS" get deploy "$GW_DEPLOYMENT" \
+        -o jsonpath='{.status.readyReplicas}/{.status.replicas}' 2>/dev/null || echo '0/0')"
+      log "   Ready/Desired: $RATIO"
+      
+      if [[ "$RATIO" == "1/1" ]] || [[ "$RATIO" == "2/2" ]]; then
+        log "   ✅ Deployment $GW_DEPLOYMENT is healthy (pods up and running)"
+      else
+        log "   ⚠️  WARNING: Deployment $GW_DEPLOYMENT is not at 1/1 or 2/2; current $RATIO"
+      fi
+    else
+      log "   ✗ ERROR: Rollout status for deployment/$GW_DEPLOYMENT did not complete successfully"
+    fi
+  fi
+fi
+
+# -----------------------------
+# create wo-custom-certs when customer uses cpd's cert management
+# -----------------------------
+if oc get secret cpd-custom-ca-certs -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1 && \
+   ! oc get secret wo-custom-certs -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+    oc get secret cpd-custom-ca-certs \
+      -n "${PROJECT_CPD_INST_OPERANDS}" \
+      -o yaml | \
+    sed \
+      -e 's/name: cpd-custom-ca-certs/name: wo-custom-certs/' \
+      -e '/creationTimestamp:/d' \
+      -e '/resourceVersion:/d' \
+      -e '/uid:/d' \
+      -e '/managedFields:/d' | \
+    oc apply -f -
+fi
+
+# -----------------------------
+# Legacy Cleanup
+# -----------------------------
+
+# Delete a named resource only if it exists
+del() {
+  local kind="$1" name="$2" ns_flag="${3:-}"
+  if oc get "$kind" "$name" ${ns_flag:+-n "$ns_flag"} >/dev/null 2>&1; then
+    oc delete "$kind" "$name" ${ns_flag:+-n "$ns_flag"} --ignore-not-found
+  fi
+}
+
+# Delete resources by label selector; skip silently if none found
+del_by_label() {
+  local kind="$1" label="$2" ns="$3"
+  if oc get "$kind" -n "$ns" -l "$label" --no-headers 2>/dev/null | grep -q .; then
+    oc delete "$kind" -n "$ns" -l "$label" --ignore-not-found
+  fi
+}
+
+# Scale a deployment to 0 only if it exists
+scale_down() {
+  local deploy="$1" ns="$2"
+  if oc get deploy "$deploy" -n "$ns" >/dev/null 2>&1; then
+    oc scale deploy "$deploy" -n "$ns" --replicas=0
+  fi
+}
+
+log "Starting legacy cleanup..."
+
+# ── UAB ────────────────────────────────────────────────────────────────────────────
+log "Disabling UAB..."
+oc patch wo wo -n "${PROJECT_CPD_INST_OPERANDS}" --type=merge \
+  -p '{"spec":{"uab":{"enabled":false}}}' 2>/dev/null || true
+
+log "Scaling down UAB operators..."
+scale_down ba-saas-uab-wf-operator-controller-manager "${PROJECT_CPD_INST_OPERATORS}"
+scale_down ibm-uab-ads-operator                       "${PROJECT_CPD_INST_OPERATORS}"
+sleep 20
+
+log "Cleaning UAB CRs and CRDs..."
+del uabautomationdecisionservices wo "${PROJECT_CPD_INST_OPERANDS}"
+del uabwfservices                 wo "${PROJECT_CPD_INST_OPERANDS}"
+del crd uabautomationdecisionservices.uab.ba.ibm.com
+del crd uabwfservices.uab.ba.ibm.com
+del crd wfpsauthorings.saas.ba.ibm.com
+
+log "Cleaning UAB WF operator resources..."
+for kind in job deploy secret cm svc; do
+  del_by_label "$kind" "app.kubernetes.io/managed-by=ibm-uab-wf-operator" "${PROJECT_CPD_INST_OPERANDS}"
+done
+
+log "Cleaning ADS resources..."
+for kind in deploy secret cm job svc; do
+  del_by_label "$kind" "app.kubernetes.io/component=ads" "${PROJECT_CPD_INST_OPERANDS}"
+done
+
+log "UAB cleanup completed."
+
+# ── Digital Employee ────────────────────────────────────────────────────────────
+log "Cleaning Digital Employee..."
+if oc api-resources 2>/dev/null | grep -q "^digitalemployees"; then
+  oc delete digitalemployees.wo.watsonx.ibm.com -n "${PROJECT_CPD_INST_OPERANDS}" --ignore-not-found
+fi
+
+scale_down digital-employee-operator-controller-manager "${PROJECT_CPD_INST_OPERATORS}"
+sleep 20
+
+for kind in deploy secret cm job svc; do
+  del_by_label "$kind" "wo.watsonx.ibm.com/component=digital-employee" "${PROJECT_CPD_INST_OPERANDS}"
+done
+
+log "Digital Employee cleanup completed."
+
+# ── Kafka ─────────────────────────────────────────────────────────────────────────────
+log "Cleaning Kafka..."
+if oc get kafka wo-watson-orchestrate-kafkaibm -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+  log "Kafka CR wo-watson-orchestrate-kafkaibm found. Deleting it..."
+  del kafka wo-watson-orchestrate-kafkaibm "${PROJECT_CPD_INST_OPERANDS}"
+  sleep 10
+
+  if oc get deploy wo-archer-server -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+    log "Deleting Archer deployment wo-archer-server..."
+    oc delete deploy wo-archer-server -n "${PROJECT_CPD_INST_OPERANDS}" --ignore-not-found
+  else
+    log "Archer deployment wo-archer-server not found; skipping."
+  fi
+else
+  log "Kafka CR wo-watson-orchestrate-kafkaibm not found; skipping Kafka and Archer cleanup."
+fi
+log "Kafka cleanup completed."
+
+
+# -----------------------------
 # Final message
 # -----------------------------
 log ""
@@ -1657,17 +1888,17 @@ log "✓ Ensure label ${OPERATOR_PATCH_LABEL_KEY}=${OPERATOR_PATCH_LABEL_VALUE} 
 log ""
 log "⏱️  It will take another 15–20 minutes for the updated components"
 log "   to be applied and restarted."
-log "------------------------------------------------------------------
+log "------------------------------------------------------------------"
 ```
 
 Make the script executable
 ```bash
-chmod 775 5.4.2-Hotfix0.sh
+chmod 775 5.4.2-Hotfix1.sh
 ```
  
 Run the script
 ```bash
-nohup sh 5.4.2-Hotfix0.sh &
+nohup sh 5.4.2-Hotfix1.sh &
 ```
  
 Watch progress
@@ -1680,25 +1911,861 @@ Verify CR status and label
 oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep -i hotfix
 ```
 
-Output should look like
+Create 5.4.2-Hotfix1-verify.sh
 ```bash
-hotfix: 5.4.2
+vi 5.4.2-Hotfix1-verify.sh 
 ```
 
-Confirm the completion of the hot fix by checking the Watsonx Orchestrate custom resource status
+With the following content
 ```bash
-oc get wo
+#!/usr/bin/env bash
+set -eo pipefail
+
+# ============================================================
+# 542 Hotfix1 Verification Script
+# Checks operator and operand deployments for expected
+# image SHAs for the 5.4.2-Hotfix1 fix.
+# Runs in a loop until all are verified or timeout is reached.
+# ============================================================
+
+# ---- Colour helpers ----------------------------------------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+# Use printf throughout — echo -e is not POSIX-portable (breaks under sh/dash)
+log()  { printf "[%s] %s\n"                             "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+ok()   { printf "${GREEN}${BOLD}[%s] OK  %s${RESET}\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+warn() { printf "${YELLOW}[%s] WARN %s${RESET}\n"       "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+err()  { printf "${RED}[%s] ERR  %s${RESET}\n"          "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+info() { printf "${CYAN}[%s] INFO %s${RESET}\n"         "$(date '+%Y-%m-%d %H:%M:%S')" "$*"; }
+
+# ---- Configuration -----------------------------------------
+PROJECT_CPD_INST_OPERATORS="${PROJECT_CPD_INST_OPERATORS:-}"
+PROJECT_CPD_INST_OPERANDS="${PROJECT_CPD_INST_OPERANDS:-}"
+
+if [ -z "$PROJECT_CPD_INST_OPERATORS" ]; then
+  err "PROJECT_CPD_INST_OPERATORS is not set."
+  exit 1
+fi
+
+if [ -z "$PROJECT_CPD_INST_OPERANDS" ]; then
+  err "PROJECT_CPD_INST_OPERANDS is not set."
+  exit 1
+fi
+
+# Poll interval (seconds) and overall timeout
+POLL_INTERVAL="${POLL_INTERVAL:-30}"
+TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-3600}"   # 60 minutes
+
+# ============================================================
+# OPERATOR deployments (live in PROJECT_CPD_INST_OPERATORS)
+# Format: "deployment-name=sha256digest"  — one entry per line, order preserved.
+# From the hotfix patch script:
+#   BOOTSTRAP_OPERATOR_IMAGE  -> wo-operator
+#   COMPONENT_OPERATOR_IMAGE  -> ibm-wxo-componentcontroller-manager
+# ============================================================
+OPERATOR_ENTRIES=(
+  "wo-operator=48d636029b579f41bc1baf4e5400bc585a1201a1a0f055cb1d6212b7cb75d2b9"
+  "ibm-wxo-componentcontroller-manager=2516e5b84db6cbca9357a268d454361fb6dac880d44c6bf8e2e6a634af1e6ade"
+)
+
+# ============================================================
+# OPERAND deployments (live in PROJECT_CPD_INST_OPERANDS)
+# Format: "deployment-name=sha256digest"  — one entry per line, order preserved.
+# ============================================================
+OPERAND_ENTRIES=(
+  "wo-ai-gateway=e2311681dca9da15bf0766eb4786d04869d08b24f7d7c998223f469dce5f5c3c"
+  "wo-wxo-connections=04d1adea76a20e4aff886a227cbbc62110b0bdeb29ec82a1c82481fea65fcdc6"
+  "wo-tenant-data-service=8f00aa42676b6f9cb76e1b49b3fd0df08971189c3a3eb95d91ffb5d090d32b08"
+  "wo-channel-integrations=ffb193e1bc39d6400006220f299b729157b5a9205932b0feefa4a5e8f0780732"
+  "wo-conversation-controller=34f68c8dbbb4792fff6171219573f755475117996a59ee03fc3a9ca7f837034c"
+  "wo-skill-server=1f86f27749d8df98c40debcf5ec8b2e4953aa653c563696a5b7b2aa8743fb20b"
+  "wo-ccaas-chat-connector=e52a2d1dc3ea1bad2167d5a3d79e9a7d91dc1686178d4cfc7cc4656b826fd32d"
+  "wo-agentic-task-manager=2a1b47bc8d2c01e6ffe128627c0194ec4e00f35ec820292923c571116c72fee9"
+  "wo-builder-ui=d2589f5b82198922fef13227ed6dbee048e0495dea63fbedc3b52a8ce51c9c87"
+  "wo-wxo-connections-ui=ea536612ca93c32302d95c1cb89bce6af318267bbcec441f0bcf412f06c0393b"
+  "wo-archer-server=798e25cd24ae0e3c9a06745870f3c580161b19e575d2dc7224d10b46f3e4278d"
+  "wo-voice-controller=71739e526c17aa290fdcf5cf968a68e00462671fae6a20943767eebf95004bfe"
+  "wo-socket-handler=6d296d32c2233e11bcfba17284af7a1acf04b716ce9f76a96d681372e2f8bd3b"
+  "wo-tools-runtime-scheduler=49689057ca6c73e4b288c40213cc6a4523e2d985809d050c4e6cbf4016676036"
+  "wo-tools-runtime-manager=928b77bf61156daa30d580d88c69f799d3a899e4b81605838e6b62b673d4f13f"
+  "wo-wxo-knowledge=3919fd5b613db6121a9caee168515da09c1618fc4157135b2322de2b52169778"
+  "wo-agentic-memory=694839c6c408a8c8bcaecbda4c50eeb09a2d66c357ac6639bf41a5bc62b76080"
+  "wo-agent-gateway=758bd2348cb907f50e95b96ce5dd9abe27523d3bae7122db1f48cd8202a7f18a"
+  "wo-uiproxy=65632b0b9f1c2022d025a5da30630f961de909f95a56d1c4c21c5ba77ccd3cb3"
+)
+
+# ============================================================
+# OPERAND jobs (live in PROJECT_CPD_INST_OPERANDS)
+# Format: "job-name=sha256digest"  — one entry per line, order preserved.
+# Checks: image SHA matches AND job status.succeeded >= 1.
+# ============================================================
+JOB_ENTRIES=(
+  "zen-addon-config-update-job=b99f2ce6e0deb1ad64e14b0858c27945691402d725559997022cf74b01d6e717"
+  "wo-tenant-data-service-migration=b99f2ce6e0deb1ad64e14b0858c27945691402d725559997022cf74b01d6e717"
+)
+
+# ---- Helpers: extract name / sha from an "name=sha" entry --
+entry_name() { echo "${1%%=*}"; }
+entry_sha()  { echo "${1#*=}";  }
+
+# ---- Pre-flight checks -------------------------------------
+WO_CR_NAME="${WO_CR_NAME:-wo}"   # override if CR name differs: export WO_CR_NAME=mywo
+EXPECTED_CR_VERSION="8.0.2"
+EXPECTED_LABEL_KEY="Hotfix"
+EXPECTED_LABEL_VALUE="5.4.2-Hotfix1"
+
+if ! oc whoami &>/dev/null; then
+  err "Not logged in to OpenShift. Please run 'oc login' first."
+  exit 1
+fi
+ok "OpenShift login verified: $(oc whoami)"
+log "Operators namespace : $PROJECT_CPD_INST_OPERATORS"
+log "Operands namespace  : $PROJECT_CPD_INST_OPERANDS"
+log "WO CR name          : $WO_CR_NAME"
+log "Timeout             : ${TIMEOUT_SECONDS}s ($(( TIMEOUT_SECONDS / 60 )) minutes)"
+log "Poll every          : ${POLL_INTERVAL}s"
+printf "\n"
+
+# Verify WO CR exists
+log "Checking WO CR '${WO_CR_NAME}' in namespace: $PROJECT_CPD_INST_OPERANDS"
+if ! oc -n "$PROJECT_CPD_INST_OPERANDS" get wo "$WO_CR_NAME" &>/dev/null; then
+  err "WO CR '${WO_CR_NAME}' not found in namespace '$PROJECT_CPD_INST_OPERANDS'."
+  err "Set WO_CR_NAME env var if your CR has a different name."
+  exit 1
+fi
+
+# Verify spec.version == 8.0.2
+CR_VERSION=$(oc -n "$PROJECT_CPD_INST_OPERANDS" get wo "$WO_CR_NAME" \
+  -o jsonpath='{.spec.version}' 2>/dev/null || true)
+if [ "$CR_VERSION" != "$EXPECTED_CR_VERSION" ]; then
+  err "WO CR '${WO_CR_NAME}' spec.version is '${CR_VERSION:-<empty>}', expected '${EXPECTED_CR_VERSION}'."
+  err "This script is only valid for 5.4.2-Hotfix1 (CR version ${EXPECTED_CR_VERSION})."
+  exit 1
+fi
+ok "WO CR spec.version: ${CR_VERSION}"
+
+# Verify Hotfix label == 5.4.2-Hotfix1
+CR_LABEL=$(oc -n "$PROJECT_CPD_INST_OPERANDS" get wo "$WO_CR_NAME" \
+  -o jsonpath="{.metadata.labels.${EXPECTED_LABEL_KEY}}" 2>/dev/null || true)
+if [ "$CR_LABEL" != "$EXPECTED_LABEL_VALUE" ]; then
+  err "WO CR label '${EXPECTED_LABEL_KEY}' is '${CR_LABEL:-<not set>}', expected '${EXPECTED_LABEL_VALUE}'."
+  err "Run the hotfix patch script first before running this verify script."
+  exit 1
+fi
+ok "WO CR label: ${EXPECTED_LABEL_KEY}=${CR_LABEL}"
+printf "\n"
+
+# Returns sha256 digest from deployment spec image (same as oc get deploy -o yaml).
+# Staging/mirrored registries remap digests at pull time, so pod imageID is unreliable.
+# Falls back to pod imageID only when spec image is a tag (not a digest ref).
+get_running_sha() {
+  local deploy="$1"
+  local ns="$2"
+
+  # Primary: spec image digest (authoritative — matches oc get deploy output)
+  local spec_image=""
+  spec_image=$(oc -n "$ns" get deploy "$deploy" \
+      -o jsonpath='{.spec.template.spec.containers[0].image}' \
+      2>/dev/null || true)
+  if [ "${spec_image#*@sha256:}" != "$spec_image" ]; then
+    echo "${spec_image##*@sha256:}"
+    return
+  fi
+
+  # Fallback: pod imageID (only when spec uses a tag, not a digest)
+  local pod="" image_id=""
+  pod=$(oc -n "$ns" get pods \
+          --field-selector=status.phase=Running \
+          -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+          2>/dev/null \
+        | grep "^${deploy}-" | head -1 || true)
+  [ -z "$pod" ] && pod=$(oc -n "$ns" get pods -l "app=${deploy}" \
+          --field-selector=status.phase=Running \
+          -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+  if [ -n "$pod" ]; then
+    image_id=$(oc -n "$ns" get pod "$pod" \
+        -o jsonpath='{.status.containerStatuses[0].imageID}' 2>/dev/null || true)
+    [ -n "$image_id" ] && echo "${image_id##*@sha256:}" && return
+  fi
+
+  echo ""
+}
+
+# ---- Helper: print one status row --------------------------
+print_row() {
+  local deploy="$1"
+  local status="$2"    # VERIFIED | NOT UPDATED | MISSING
+  local current="$3"
+  local expected="$4"
+
+  local color
+  case "$status" in
+    VERIFIED)                color="$GREEN"  ;;
+    "NOT UPDATED" | MISSING) color="$RED"    ;;
+    *)                       color="$YELLOW" ;;
+  esac
+
+  local got_display=""
+  [ -n "$current" ] && got_display="${current:0:16}..."
+
+  printf "  %-44s ${color}%-14s${RESET}  expected: %.16s...  got: %s\n" \
+    "$deploy" "$status" "$expected" "$got_display"
+}
+
+# ---- Helper: check one group of deployments ----------------
+# Usage: check_group <namespace> <entries_array_ref>
+# Sets globals: _GROUP_VERIFIED  _GROUP_PENDING  _GROUP_MISSING
+check_group() {
+  local ns="$1"
+  local entries_ref="$2"   # name of the *_ENTRIES array
+
+  _GROUP_VERIFIED=0
+  _GROUP_PENDING=0
+  _GROUP_MISSING=0
+
+  local entry deploy expected current
+  eval "local -a _entries=(\"\${${entries_ref}[@]}\")"
+  for entry in "${_entries[@]}"; do
+    deploy=$(entry_name "$entry")
+    expected=$(entry_sha  "$entry")
+
+    if ! oc -n "$ns" get deploy "$deploy" &>/dev/null; then
+      print_row "$deploy" "MISSING" "" "$expected"
+      _GROUP_MISSING=$(( _GROUP_MISSING + 1 ))
+      continue
+    fi
+
+    current=$(get_running_sha "$deploy" "$ns")
+
+    if [ "$current" = "$expected" ]; then
+      print_row "$deploy" "VERIFIED" "$current" "$expected"
+      _GROUP_VERIFIED=$(( _GROUP_VERIFIED + 1 ))
+    else
+      print_row "$deploy" "NOT UPDATED" "$current" "$expected"
+      _GROUP_PENDING=$(( _GROUP_PENDING + 1 ))
+    fi
+  done
+}
+
+# ---- Helper: check one group of jobs -----------------------
+# Jobs are verified on two criteria:
+#   1. spec image SHA matches expected
+#   2. status.succeeded >= 1 (job completed successfully)
+# Sets globals: _GROUP_VERIFIED  _GROUP_PENDING  _GROUP_MISSING
+check_jobs() {
+  local ns="$1"
+  local entries_ref="$2"   # name of the *_ENTRIES array
+
+  _GROUP_VERIFIED=0
+  _GROUP_PENDING=0
+  _GROUP_MISSING=0
+
+  local entry job expected spec_image current_sha succeeded
+  eval "local -a _entries=(\"\${${entries_ref}[@]}\")"
+  for entry in "${_entries[@]}"; do
+    job=$(entry_name "$entry")
+    expected=$(entry_sha  "$entry")
+
+    if ! oc -n "$ns" get job "$job" &>/dev/null; then
+      print_row "$job" "MISSING" "" "$expected"
+      _GROUP_MISSING=$(( _GROUP_MISSING + 1 ))
+      continue
+    fi
+
+    spec_image=$(oc -n "$ns" get job "$job" \
+        -o jsonpath='{.spec.template.spec.containers[0].image}' \
+        2>/dev/null || true)
+    current_sha="${spec_image##*@sha256:}"
+    # If spec image has no digest, treat sha as empty
+    [ "$spec_image" = "$current_sha" ] && current_sha=""
+
+    succeeded=$(oc -n "$ns" get job "$job" \
+        -o jsonpath='{.status.succeeded}' \
+        2>/dev/null || true)
+    succeeded="${succeeded:-0}"
+
+    if [ "$current_sha" = "$expected" ] && (( succeeded >= 1 )); then
+      print_row "$job" "VERIFIED" "$current_sha" "$expected"
+      _GROUP_VERIFIED=$(( _GROUP_VERIFIED + 1 ))
+    else
+      print_row "$job" "NOT COMPLETE" "$current_sha" "$expected"
+      _GROUP_PENDING=$(( _GROUP_PENDING + 1 ))
+    fi
+  done
+}
+
+# ---- Main verification loop --------------------------------
+START_TS=$(date +%s)
+ITERATION=0
+
+_GROUP_VERIFIED=0
+_GROUP_PENDING=0
+_GROUP_MISSING=0
+
+while true; do
+  ITERATION=$(( ITERATION + 1 ))
+  NOW=$(date +%s)
+  ELAPSED=$(( NOW - START_TS ))
+
+  if (( ELAPSED >= TIMEOUT_SECONDS )); then
+    printf "\n"
+    err "Timeout of ${TIMEOUT_SECONDS}s reached after ${ELAPSED}s."
+    err "Deployments that did NOT reach the expected SHA:"
+
+    printf "  ${BOLD}Operators (${PROJECT_CPD_INST_OPERATORS}):${RESET}\n"
+    for entry in "${OPERATOR_ENTRIES[@]}"; do
+      d=$(entry_name "$entry")
+      _exp=$(entry_sha "$entry")
+      _sha=$(get_running_sha "$d" "$PROJECT_CPD_INST_OPERATORS")
+      [ "$_sha" != "$_exp" ] && printf "    ${RED}%s${RESET}\n" "$d"
+    done
+
+    printf "  ${BOLD}Operands (${PROJECT_CPD_INST_OPERANDS}):${RESET}\n"
+    for entry in "${OPERAND_ENTRIES[@]}"; do
+      d=$(entry_name "$entry")
+      _exp=$(entry_sha "$entry")
+      _sha=$(get_running_sha "$d" "$PROJECT_CPD_INST_OPERANDS")
+      [ "$_sha" != "$_exp" ] && printf "    ${RED}%s${RESET}\n" "$d"
+    done
+
+    printf "  ${BOLD}Jobs (${PROJECT_CPD_INST_OPERANDS}):${RESET}\n"
+    for entry in "${JOB_ENTRIES[@]}"; do
+      d=$(entry_name "$entry")
+      _exp=$(entry_sha "$entry")
+      _spec=$(oc -n "$PROJECT_CPD_INST_OPERANDS" get job "$d" \
+          -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+      _sha="${_spec##*@sha256:}"; [ "$_spec" = "$_sha" ] && _sha=""
+      _succ=$(oc -n "$PROJECT_CPD_INST_OPERANDS" get job "$d" \
+          -o jsonpath='{.status.succeeded}' 2>/dev/null || true)
+      { [ "$_sha" != "$_exp" ] || (( ${_succ:-0} < 1 )); } && printf "    ${RED}%s${RESET}\n" "$d"
+    done
+    exit 1
+  fi
+
+  REMAINING=$(( TIMEOUT_SECONDS - ELAPSED ))
+  TOTAL_DEPLOYMENTS=$(( ${#OPERATOR_ENTRIES[@]} + ${#OPERAND_ENTRIES[@]} + ${#JOB_ENTRIES[@]} ))
+
+  printf "\n"
+  printf "${BOLD}================================================================${RESET}\n"
+  printf "${BOLD} 5.4.2-Hotfix1 Verification -- iteration #%s${RESET}\n" "$ITERATION"
+  printf "${BOLD} Elapsed : %ss  |  Remaining: %ss${RESET}\n"            "$ELAPSED" "$REMAINING"
+  printf "${BOLD}================================================================${RESET}\n"
+
+  # ---- OPERATORS section ------------------------------------
+  printf "\n"
+  printf "${BOLD}${CYAN}  [OPERATORS]  namespace: %s${RESET}\n" "$PROJECT_CPD_INST_OPERATORS"
+  printf "${BOLD}${CYAN}  %-44s %-14s  %s${RESET}\n" "Deployment" "Status" "SHA (first 16 chars)"
+  printf "  %s\n" "----------------------------------------------------------------------"
+
+  check_group "$PROJECT_CPD_INST_OPERATORS" OPERATOR_ENTRIES
+  OP_VERIFIED=$_GROUP_VERIFIED
+  OP_PENDING=$_GROUP_PENDING
+  OP_MISSING=$_GROUP_MISSING
+  OP_TOTAL="${#OPERATOR_ENTRIES[@]}"
+
+  printf "\n"
+  printf "  Operators summary -> ${GREEN}Verified: %s${RESET}  |  ${RED}Pending: %s${RESET}  |  ${YELLOW}Missing: %s${RESET}  |  Total: %s\n" \
+    "$OP_VERIFIED" "$OP_PENDING" "$OP_MISSING" "$OP_TOTAL"
+
+  # ---- OPERANDS section -------------------------------------
+  printf "\n"
+  printf "${BOLD}${CYAN}  [OPERANDS]   namespace: %s${RESET}\n" "$PROJECT_CPD_INST_OPERANDS"
+  printf "${BOLD}${CYAN}  %-44s %-14s  %s${RESET}\n" "Deployment" "Status" "SHA (first 16 chars)"
+  printf "  %s\n" "----------------------------------------------------------------------"
+
+  check_group "$PROJECT_CPD_INST_OPERANDS" OPERAND_ENTRIES
+  OD_VERIFIED=$_GROUP_VERIFIED
+  OD_PENDING=$_GROUP_PENDING
+  OD_MISSING=$_GROUP_MISSING
+  OD_TOTAL="${#OPERAND_ENTRIES[@]}"
+
+  printf "\n"
+  printf "  Operands summary  -> ${GREEN}Verified: %s${RESET}  |  ${RED}Pending: %s${RESET}  |  ${YELLOW}Missing: %s${RESET}  |  Total: %s\n" \
+    "$OD_VERIFIED" "$OD_PENDING" "$OD_MISSING" "$OD_TOTAL"
+
+  # ---- JOBS section -----------------------------------------
+  printf "\n"
+  printf "${BOLD}${CYAN}  [JOBS]       namespace: %s${RESET}\n" "$PROJECT_CPD_INST_OPERANDS"
+  printf "${BOLD}${CYAN}  %-44s %-14s  %s${RESET}\n" "Job" "Status" "SHA (first 16 chars)"
+  printf "  %s\n" "----------------------------------------------------------------------"
+
+  check_jobs "$PROJECT_CPD_INST_OPERANDS" JOB_ENTRIES
+  JB_VERIFIED=$_GROUP_VERIFIED
+  JB_PENDING=$_GROUP_PENDING
+  JB_MISSING=$_GROUP_MISSING
+  JB_TOTAL="${#JOB_ENTRIES[@]}"
+
+  printf "\n"
+  printf "  Jobs summary      -> ${GREEN}Verified: %s${RESET}  |  ${RED}Pending: %s${RESET}  |  ${YELLOW}Missing: %s${RESET}  |  Total: %s\n" \
+    "$JB_VERIFIED" "$JB_PENDING" "$JB_MISSING" "$JB_TOTAL"
+
+  # ---- Overall summary --------------------------------------
+  TOTAL_VERIFIED=$(( OP_VERIFIED + OD_VERIFIED + JB_VERIFIED ))
+  TOTAL_PENDING=$(( OP_PENDING + OD_PENDING + JB_PENDING ))
+  TOTAL_MISSING=$(( OP_MISSING + OD_MISSING + JB_MISSING ))
+
+  printf "\n"
+  printf "${BOLD}----------------------------------------------------------------${RESET}\n"
+  printf "${BOLD}  OVERALL  -> ${GREEN}Verified: %s${RESET}${BOLD}  |  ${RED}Pending: %s${RESET}${BOLD}  |  ${YELLOW}Missing: %s${RESET}${BOLD}  |  Total: %s${RESET}\n" \
+    "$TOTAL_VERIFIED" "$TOTAL_PENDING" "$TOTAL_MISSING" "$TOTAL_DEPLOYMENTS"
+  printf "${BOLD}----------------------------------------------------------------${RESET}\n"
+
+  if (( TOTAL_PENDING == 0 && TOTAL_MISSING == 0 )); then
+    ELAPSED=$(( $(date +%s) - START_TS ))
+    printf "\n"
+    ok "All ${TOTAL_DEPLOYMENTS} deployments updated to expected Hotfix1 SHA values."
+    printf "\n"
+    printf "${BOLD}================================================================${RESET}\n"
+    printf "${GREEN}${BOLD}[%s] 5.4.2-Hotfix1 verification PASSED (completed in %ss)${RESET}\n" \
+      "$(date '+%Y-%m-%d %H:%M:%S')" "$ELAPSED"
+    printf "${BOLD}================================================================${RESET}\n"
+    exit 0
+  fi
+
+  if (( TOTAL_MISSING > 0 )); then
+    warn "${TOTAL_MISSING} deployment(s) not found. They may still be deploying."
+  fi
+
+  info "Next check in ${POLL_INTERVAL}s -- press Ctrl+C to abort."
+  sleep "$POLL_INTERVAL"
+done
 ```
 
-The expected output
+Make the script executable
 ```bash
-NAME   VERSION   DEPLOYED   VERIFIED   TOTAL   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
-wo     5.4.2     45         45         45      agentic_assistant   NOT_QUIESCED   100%                 Xd
+chmod 775 5.4.2-Hotfix1-verify.sh
 ```
 
-**Important**: For any other issues with Watsonx Orchestrate components, you can run the check_orchestrate_health utility, found here
+Run the script
 ```bash
-wget -O check_orchestrate_health_v12.sh https://raw.githubusercontent.com/watson-developer-cloud/community/master/watsonx-orchestrate/scripts/check_orchestrate_health_v12.sh ; sh check_orchestrate_health_v12.sh -t
+5.4.2-Hotfix1-verify.sh
+```
+
+Verify CR status and label
+```bash
+oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep -i hotfix
+      Hotfix: 5.4.2-Hotfix1
+```
+
+Wait 30 minutes for the changes to take effect
+
+If verification is not successful, see the following Known issue section for guidance
+
+---
+
+#### Potential Issue - wo-archer-server-db-schema-job stuck after applying WxO hotfix
+
+Confirm if archer-db-schema job is in Completed state
+```bash
+oc get job wo-archer-server-db-schema-job
+NAME                             STATUS     COMPLETIONS   DURATION   AGE
+wo-archer-server-db-schema-job   Complete   1/1           43h        4d6h
+```
+
+Run the following script only if the verification using the above script fails, indicating that the job did not run successfully when the hotfix was applied
+```bash
+vi wxo-hotfix-db-schema-job-unblock.sh
+```
+
+With the following contents
+```bash
+#!/usr/bin/env bash
+# =============================================================================
+# wxo-hotfix0-db-schema-job-unblock.sh
+#
+# WORKAROUND: wo-archer-server-db-schema-job stuck after applying WxO hotfix-0
+#             (operand version 8.0.2 / Patch 5)
+#
+# ROOT CAUSE
+# ----------
+# The hotfix triggers <cr-name>-archer-server-db-schema-job, which runs DDL
+# statements (DROP TRIGGER, COMMENT ON COLUMN, ALTER TABLE) on the 'archer'
+# Postgres database. These DDL statements require an ACCESS EXCLUSIVE lock on
+# the target table. Orphaned archer-server connections left in "idle in
+# transaction" state by previous pod restarts hold an ACCESS SHARE lock on the
+# same table, blocking the DDL indefinitely — the job pod stays Running with
+# no progress for hours or days.
+#
+# These orphaned connections are SQLAlchemy pool connections from
+# <cr-name>-archer-server pods that were recycled during the hotfix rolling
+# update. The application thread is gone but the server-side Postgres backend
+# was never cleaned up.
+#
+# WHAT THIS SCRIPT DOES
+# ---------------------
+#  1. Requires NS (namespace) as mandatory input.
+#  2. Auto-discovers the WatsonxOrchestrate CR name within that namespace.
+#  3. Locates the EDB Postgres primary pod by the fixed pattern
+#     <cr-name>-watson-orchestrate-postgresedb-1.
+#  4. Reports the current job status and last log line.
+#  5. Finds all orphaned "idle in transaction" archer-server connections on
+#     the archer DB that have been open for more than 30 minutes.
+#  6. DRY-RUN (default): prints the PIDs — no changes made.
+#  7. --fix mode: terminates each connection via pg_terminate_backend(),
+#     verifies the lock chain clears, then confirms the job resumes.
+#
+# SAFETY
+# ------
+# Terminating these connections causes zero data loss. Here is why:
+#
+# In practice, all orphaned connections observed across affected clusters held
+# read-only SELECT transactions. However, even in the unlikely case where an
+# orphaned connection holds an uncommitted write (INSERT/UPDATE/DELETE):
+#
+#   1. The pod that owned the connection has already been terminated. The
+#      original HTTP request or Celery task has already failed with a connection
+#      error — there is no live application code waiting on the result.
+#
+#   2. pg_terminate_backend() causes Postgres to issue an automatic ROLLBACK on
+#      the open transaction before closing the connection. This is the correct
+#      and intended outcome for any transaction whose owning process is dead.
+#
+#   3. Committed data is never affected — pg_terminate_backend() only rolls
+#      back uncommitted work. An uncommitted write from a dead pod is not
+#      "owned" data; it is a failed operation that must be retried by the
+#      caller regardless of what this script does.
+#
+# The only observable side effect is that live archer-server pods may receive
+# a transient connection error when SQLAlchemy checks out a stale connection
+# from the pool; SQLAlchemy's pool_pre_ping reconnects automatically.
+#
+# USAGE
+# -----
+#   # NS is mandatory — set it to your WxO application namespace.
+#   # CR name is auto-discovered; no need to set it manually.
+#
+#   # Dry-run — safe, no changes:
+#   NS=<wxo-namespace> ./wxo-hotfix0-db-schema-job-unblock.sh
+#
+#   # Apply the fix:
+#   NS=<wxo-namespace> ./wxo-hotfix0-db-schema-job-unblock.sh --fix
+#
+#   # Examples:
+#   NS=cpd-instance-1 ./wxo-hotfix0-db-schema-job-unblock.sh
+#   NS=cpd-instance-1 ./wxo-hotfix0-db-schema-job-unblock.sh --fix
+#
+# REQUIREMENTS
+# ------------
+#   - bash 4.0+
+#   - oc CLI, logged in with cluster-admin or equivalent RBAC
+#   - oc exec access to the EDB Postgres pod
+#
+# =============================================================================
+
+set -euo pipefail
+
+# ── Colour helpers ────────────────────────────────────────────────────────────
+RED='\033[0;31m'; YELLOW='\033[1;33m'; GREEN='\033[0;32m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+info()    { echo -e "${CYAN}[INFO]${NC}  $*"; }
+warn()    { echo -e "${YELLOW}[WARN]${NC}  $*"; }
+success() { echo -e "${GREEN}[OK]${NC}    $*"; }
+error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+header()  { echo -e "\n${BOLD}=== $* ===${NC}"; }
+
+# ── Argument parsing ──────────────────────────────────────────────────────────
+FIX_MODE=false
+for arg in "$@"; do
+  case $arg in
+    --fix)    FIX_MODE=true ;;
+    --help|-h)
+      grep "^# " "$0" | sed 's/^# \?//'
+      exit 0 ;;
+    *) error "Unknown argument: $arg  (use --fix or --help)"; exit 1 ;;
+  esac
+done
+
+# ── Step 1: Namespace validation & CR name discovery ─────────────────────────
+header "Step 1: Namespace validation & CR name discovery"
+
+# NS is mandatory — customer clusters use varying namespace names.
+if [[ -z "${NS:-}" ]]; then
+  error "NS is not set. Please provide the WxO application namespace."
+  error ""
+  error "Usage:  NS=<wxo-namespace> $0 [--fix]"
+  error ""
+  error "To find your namespace:"
+  error "  oc get watsonxorchestrate --all-namespaces"
+  exit 1
+fi
+
+# Verify the namespace exists and is accessible.
+if ! oc get namespace "$NS" &>/dev/null; then
+  error "Namespace '$NS' not found or not accessible."
+  error "Verify you are logged in to the correct cluster and NS is correct."
+  exit 1
+fi
+
+# Auto-discover CR name — customers may override the default 'wo'.
+CR=$(oc get watsonxorchestrate -n "$NS" \
+       -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+if [[ -z "$CR" ]]; then
+  error "No WatsonxOrchestrate CR found in namespace '$NS'."
+  error "Verify NS is the correct WxO application namespace."
+  exit 1
+fi
+
+info "Namespace : $NS"
+info "CR name   : $CR"
+
+# ── Step 2: Postgres primary pod discovery ────────────────────────────────────
+header "Step 2: Postgres primary pod discovery"
+
+# The EDB primary pod name follows the fixed pattern:
+#   <cr-name>-watson-orchestrate-postgresedb-1
+# The -1 suffix always identifies the primary in EDB operator naming.
+# Constructing the exact name (rather than grepping) avoids false matches
+# against any unrelated Postgres instances in the same namespace.
+PG_POD="${CR}-watson-orchestrate-postgresedb-1"
+
+if ! oc get pod "$PG_POD" -n "$NS" &>/dev/null; then
+  error "Postgres primary pod '$PG_POD' not found in namespace '$NS'."
+  error "Expected pod name: <cr-name>-watson-orchestrate-postgresedb-1"
+  error "Verify the EDB Postgres cluster is running:"
+  error "  oc get pods -n $NS | grep postgresedb"
+  exit 1
+fi
+
+PG_PHASE=$(oc get pod "$PG_POD" -n "$NS" \
+             -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
+if [[ "$PG_PHASE" != "Running" ]]; then
+  error "Postgres primary pod '$PG_POD' is not Running (phase: $PG_PHASE)."
+  error "The Postgres cluster must be healthy before running this script."
+  exit 1
+fi
+
+info "Postgres primary pod: $PG_POD (phase: $PG_PHASE)"
+
+# Helper — run SQL, return raw -tAq output (no headers, no alignment)
+pg_exec() {
+  oc exec -n "$NS" "$PG_POD" -- \
+    psql -U postgres -tAq -c "$1" 2>/dev/null
+}
+
+# ── Step 3: Job status ────────────────────────────────────────────────────────
+header "Step 3: ${CR}-archer-server-db-schema-job status"
+
+JOB_NAME="${CR}-archer-server-db-schema-job"
+
+if ! oc get job "$JOB_NAME" -n "$NS" &>/dev/null; then
+  warn "Job '$JOB_NAME' not found in namespace '$NS'."
+  warn "It may have already completed or not yet been triggered."
+  warn "Continuing to check for orphaned connections anyway..."
+else
+  ACTIVE=$(oc get job "$JOB_NAME" -n "$NS" \
+             -o jsonpath='{.status.active}' 2>/dev/null || echo "0")
+  SUCCEEDED=$(oc get job "$JOB_NAME" -n "$NS" \
+                -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
+  FAILED_CNT=$(oc get job "$JOB_NAME" -n "$NS" \
+                 -o jsonpath='{.status.failed}' 2>/dev/null || echo "0")
+  START_TIME=$(oc get job "$JOB_NAME" -n "$NS" \
+                 -o jsonpath='{.status.startTime}' 2>/dev/null || echo "")
+
+  info "Job status — active=$ACTIVE  succeeded=$SUCCEEDED  failed=$FAILED_CNT"
+  [[ -n "$START_TIME" ]] && info "Started at: $START_TIME"
+
+  if [[ "$SUCCEEDED" == "1" ]]; then
+    success "Job has already completed successfully. No action needed."
+    exit 0
+  fi
+
+  if [[ "$ACTIVE" == "1" ]]; then
+    STUCK_POD=$(oc get pods -n "$NS" \
+                  --selector="job-name=${JOB_NAME}" \
+                  --field-selector=status.phase=Running \
+                  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+    if [[ -n "$STUCK_POD" ]]; then
+      warn "Job pod is running: $STUCK_POD"
+      LAST_LOG=$(oc logs "$STUCK_POD" -n "$NS" --tail=1 2>/dev/null \
+                 | grep -v "^$" || true)
+      info "Last log line: ${LAST_LOG:-<no output yet>}"
+    fi
+  fi
+fi
+
+# ── Step 4: Orphaned connection discovery ─────────────────────────────────────
+header "Step 4: Orphaned 'idle in transaction' connections (archer DB)"
+
+info "Querying pg_stat_activity for archer-server connections idle in transaction > 30 min..."
+
+# application_name is set by SQLAlchemy via get_application_name() in wxo-server.
+# Four variants are possible depending on SERVER_TYPE and sync/async engine:
+#   wxo-server                      — FastAPI sync engine (archer-server pod)
+#   async-wxo-server                — FastAPI async engine (archer-server pod)
+#   conversation-controller         — Celery sync engine (SERVER_TYPE=CELERY)
+#   async-conversation-controller   — Celery async engine (SERVER_TYPE=CELERY)
+# All variants append ' - <ip>:<port>', e.g. 'async-wxo-server - 10.0.0.1:12345'.
+# The regex below matches all four prefixes regardless of IP:port suffix.
+ORPHAN_QUERY="
+SELECT pid,
+       application_name,
+       EXTRACT(EPOCH FROM (now() - query_start))::bigint AS age_seconds,
+       left(regexp_replace(query, E'[\n\r]+', ' ', 'g'), 80) AS query_snippet
+FROM pg_stat_activity
+WHERE datname = 'archer'
+  AND state = 'idle in transaction'
+  AND application_name ~ '^(wxo-server|async-wxo-server|conversation-controller|async-conversation-controller) - '
+  AND query_start < now() - interval '30 minutes'
+ORDER BY query_start ASC;"
+
+# Collect PIDs into array for termination loop; also build display rows
+declare -a ORPHAN_PIDS=()
+ORPHAN_DISPLAY=""
+
+while IFS='|' read -r pid app age_sec query; do
+  pid=$(echo "$pid" | tr -d ' ')
+  age_sec=$(echo "$age_sec" | tr -d ' ')
+  [[ -z "$pid" || ! "$pid" =~ ^[0-9]+$ ]] && continue
+  ORPHAN_PIDS+=("$pid")
+  age_human=$(printf '%dd %02dh %02dm' \
+    $((age_sec/86400)) $(((age_sec%86400)/3600)) $(((age_sec%3600)/60)))
+  ORPHAN_DISPLAY+=$(printf "  %-10s %-38s %-14s %s\n" \
+    "$pid" "${app:0:38}" "$age_human" "${query:0:55}")
+  ORPHAN_DISPLAY+=$'\n'
+done < <(pg_exec "$ORPHAN_QUERY")
+
+ORPHAN_COUNT=${#ORPHAN_PIDS[@]}
+
+if [[ $ORPHAN_COUNT -eq 0 ]]; then
+  success "No orphaned idle-in-transaction archer-server connections found."
+  info "If the job is still stuck, check for other blockers:"
+  echo ""
+  echo "  oc exec -n $NS $PG_POD -- psql -U postgres -c \\"
+  echo "  \"SELECT blocked.pid, left(blocked.query,60) AS blocked_q,"
+  echo "          blocker.pid AS blocker_pid, blocker.state,"
+  echo "          blocker.application_name"
+  echo "   FROM pg_stat_activity blocked"
+  echo "   JOIN pg_stat_activity blocker"
+  echo "     ON blocker.pid = ANY(pg_blocking_pids(blocked.pid))"
+  echo "   WHERE cardinality(pg_blocking_pids(blocked.pid)) > 0;\""
+  exit 0
+fi
+
+warn "Found $ORPHAN_COUNT orphaned connection(s) — all hold READ-ONLY transactions:"
+echo ""
+printf "  %-10s %-38s %-14s %s\n" "PID" "APPLICATION" "IDLE DURATION" "QUERY (truncated)"
+printf "  %-10s %-38s %-14s %s\n" "----------" "--------------------------------------" \
+  "--------------" "-------------------------------------------------------"
+echo -n "$ORPHAN_DISPLAY"
+echo ""
+
+# ── Dry-run gate ──────────────────────────────────────────────────────────────
+if [[ "$FIX_MODE" == false ]]; then
+  echo -e "${YELLOW}DRY-RUN MODE — no changes made.${NC}"
+  echo ""
+  echo "All $ORPHAN_COUNT connection(s) above can be safely terminated."
+  echo "They hold read-only SELECT transactions — zero data loss on termination."
+  echo ""
+  echo "To apply the fix:"
+  echo "  NS=$NS $0 --fix"
+  exit 0
+fi
+
+# ── Step 5: Terminate orphaned connections ────────────────────────────────────
+header "Step 5: Terminating $ORPHAN_COUNT orphaned connection(s)"
+
+TERMINATED=0
+NOT_FOUND=0
+
+for pid in "${ORPHAN_PIDS[@]}"; do
+  info "Terminating PID $pid..."
+  RESULT=$(pg_exec "SELECT pg_terminate_backend($pid);" || echo "error")
+  RESULT=$(echo "$RESULT" | tr -d ' \n')
+  if [[ "$RESULT" == "t" ]]; then
+    success "PID $pid terminated."
+    ((TERMINATED++))
+  else
+    warn "PID $pid: returned '$RESULT' (may already have exited — safe to ignore)."
+    ((NOT_FOUND++))
+  fi
+done
+
+echo ""
+info "Terminated: $TERMINATED  |  Already gone: $NOT_FOUND"
+
+# ── Step 6: Verify lock chain cleared ─────────────────────────────────────────
+header "Step 6: Verifying lock chain is cleared"
+
+sleep 3
+
+REMAINING=$(pg_exec "
+SELECT count(*)
+FROM pg_stat_activity blocked
+JOIN pg_stat_activity blocker
+  ON blocker.pid = ANY(pg_blocking_pids(blocked.pid))
+WHERE cardinality(pg_blocking_pids(blocked.pid)) > 0
+  AND blocked.datname = 'archer';" || echo "?")
+REMAINING=$(echo "$REMAINING" | tr -d ' ')
+
+if [[ "$REMAINING" == "0" ]]; then
+  success "Lock chain cleared — no blocking sessions remain on archer DB."
+else
+  warn "$REMAINING blocking session(s) still present on archer DB."
+  warn "There may be additional blockers not matching the archer-server pattern."
+  warn "Run the full lock chain query to investigate:"
+  echo ""
+  echo "  oc exec -n $NS $PG_POD -- psql -U postgres -c \\"
+  echo "  \"SELECT blocked.pid, left(blocked.query,60) AS blocked_q,"
+  echo "          blocker.pid AS blocker_pid, blocker.state,"
+  echo "          blocker.application_name"
+  echo "   FROM pg_stat_activity blocked"
+  echo "   JOIN pg_stat_activity blocker"
+  echo "     ON blocker.pid = ANY(pg_blocking_pids(blocked.pid))"
+  echo "   WHERE cardinality(pg_blocking_pids(blocked.pid)) > 0;\""
+fi
+
+# ── Step 7: Job progress confirmation ─────────────────────────────────────────
+header "Step 7: Confirming job progress"
+
+sleep 5
+
+STUCK_POD=$(oc get pods -n "$NS" \
+              --selector="job-name=${JOB_NAME}" \
+              --field-selector=status.phase=Running \
+              -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+
+if [[ -n "$STUCK_POD" ]]; then
+  NEW_LOG=$(oc logs "$STUCK_POD" -n "$NS" --tail=1 2>/dev/null \
+              | grep -v "^$" || true)
+  info "Latest log from $STUCK_POD:"
+  echo "  ${NEW_LOG:-<no output yet>}"
+  echo ""
+  info "Monitor completion (blocks until done):"
+  echo "  oc wait job/${JOB_NAME} -n $NS \\"
+  echo "    --for=condition=Complete --timeout=3600s"
+else
+  JOB_DONE=$(oc get job "$JOB_NAME" -n "$NS" \
+               -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' \
+               2>/dev/null || true)
+  if [[ "$JOB_DONE" == "True" ]]; then
+    success "Job completed successfully!"
+  else
+    info "Job pod not yet visible — may be restarting after lock cleared."
+    info "Re-check in ~30s:  oc get job $JOB_NAME -n $NS"
+  fi
+fi
+
+echo ""
+success "Workaround applied."
+info "Once the job completes, WxO reconciliation resumes automatically."
+info "Expected final CR state: RECONCILE_PROGRESS=100%  READY=True"
+info "Monitor with:"
+echo "  oc get watsonxorchestrate $CR -n $NS"
+```
+
+Make the script executable
+```bash
+chmod 775 wxo-hotfix-db-schema-job-unblock.sh
+```
+
+Run the script
+```bash
+./wxo-hotfix-db-schema-job-unblock.sh
 ```
 
 ---
@@ -2519,6 +3586,11 @@ oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
 List service instances
 ```bash
 cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
+```
+
+For any other issues with Watsonx Orchestrate components, you can run the check_orchestrate_health utility, found here
+```bash
+wget -O check_orchestrate_health_v12.sh https://raw.githubusercontent.com/watson-developer-cloud/community/master/watsonx-orchestrate/scripts/check_orchestrate_health_v12.sh ; sh check_orchestrate_health_v12.sh -t
 ```
 
 Validate 'expose:external-regional' label in the cpd route, add the label "expose:external-regional" to your cpd-route as required
