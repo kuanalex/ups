@@ -1679,20 +1679,6 @@ Upgrade the service instances
 cpd-cli service-instance upgrade --service-type=cognos-analytics-app --profile=${CPD_PROFILE_NAME} --version=${INSTANCE_VERSION} --all
 ```
 
-#### Potential Issue - CAserviceinstance stuck trying to connect to dispatcher
-
-While upgrading Governance, in an effort to speed up the upgrade, we upgraded the service instance of CAserviceinstance to the newer version
-
-This appeared to put the ca-reporting service in a bad state
-
-Even though the new version appeared on the service instance, the dispatcher was still trying to connect to the old version
-
-This caused the old pods of the `reporting` pods to not come down and the new pods to not boot up properly
-
-To fix this issue, we had to delete the all the CA Pods (`smarts`, `reporting`, etc) and operator to re-create them
-
-This allowed the pods to come up properly, upgrade and report back healthy
-
 ---
 
 #### Upgrade Openpages service instances
@@ -1785,14 +1771,7 @@ The command that you run depends on where your cluster pulls images from
 
 Run the following command if you are using a private container registry and the scheduling service is not installed on the cluster
 ```bash
-cpd-cli oadp install \
---component=cpdbr-tenant \
---namespace=${OADP_PROJECT} \
---tenant-operator-namespace=${PROJECT_CPD_INST_OPERATORS} \
---private-registry-location=${PRIVATE_REGISTRY_LOCATION} \
---upgrade=true \
---log-level=debug \
---verbose
+cpd-cli oadp install --component=cpdbr-tenant --namespace=${OADP_PROJECT} --tenant-operator-namespace=${PROJECT_CPD_INST_OPERATORS} --private-registry-location=${PRIVATE_REGISTRY_LOCATION} --upgrade=true --log-level=debug --verbose
 ```
 
 Confirm that the required cluster role and cluster role binding were created in the ${PROJECT_INST_BR_SVC} when you installed the cpdbr-tenant service
