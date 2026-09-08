@@ -3542,13 +3542,15 @@ fi
 
 #### Potential Issue - Chat with docs cleanup job fails due to insufficient memory after upgrade
 
-After upgrading from 5.3.0 to 5.3.1 Patch 3 or Patch 5, the wo-chat-with-docs-expiry-cronjob pod fails with an OOMKilled error. The pod's memory limit is set to 200Mi, which may be insufficient when processing multiple knowledge bases or chat-with-docs resources that need to be deleted. 
+After upgrading 5.4.0 Patch 5, the wo-chat-with-docs-expiry-cronjob pod fails with an OOMKilled error
+
+The pod's memory limit is set to 200Mi, which may be insufficient when processing multiple knowledge bases or chat-with-docs resources that need to be deleted
 
 The job performs several memory-intensive operations including:
--Multiple Postgres queries and updates to remove knowledge bases and related sub-resources
--Milvus vector store cleanup operations
--S3 document deletion
--HTTP requests to TRM (Tools Runtime Manager) to remove tool deployments
+- Multiple Postgres queries and updates to remove knowledge bases and related sub-resources
+- Milvus vector store cleanup operations
+- S3 document deletion
+- HTTP requests to TRM (Tools Runtime Manager) to remove tool deployments
 
 To resolve this issue, increase the memory limit for the chat with docs expiry cronjob
 ```bash
