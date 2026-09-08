@@ -1,4 +1,4 @@
-# UPS Non-Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
+# UPS Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
 ## Author: Alex Kuan (alex.kuan@ibm.com)
 
 **From:**
@@ -341,34 +341,34 @@ Login to the cluster
 ${CPDM_OC_LOGIN}
 ```
 
-Apply the non-prod license for IBM Software Hub
+Apply the prod license for IBM Software Hub
 ```bash
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cpd-enterprise --production=false
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cpd-enterprise
 ```
 
-Apply watsonx.ai non-prod license
+Apply watsonx.ai prod license
 ```bash
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}  --entitlement=watsonx-ai --production=false
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}  --entitlement=watsonx-ai 
 ```
 
-Apply watsonx.governance non prod licenses
+Apply watsonx.governance prod license(s)
 ```bash
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-mm --production=false
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-rc --production=false
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-mm 
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-rc 
 ```
 
-Apply watsonx Orchestrate non prod license
+Apply watsonx Orchestrate prod license
 ```bash
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-orchestrate --production=false
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-orchestrate
 ```
 
-Apply Watson Speech licenses, skip for non prod*
+Apply Watson Speech prod license(s)
 ```bash
-#cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=speech-to-text
-#cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=text-to-speech
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=speech-to-text
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=text-to-speech
 ```
 
-Apply Cognos Analytics license, skip for non prod*
+Apply Cognos Analytics prod license
 ```bash
 #cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cognos-analytics
 ```
@@ -381,14 +381,16 @@ oc get cm cpd-applied-entitlements -o yaml
 For example
 ```bash
 data:
-  applied-entitlements: '{"cpd-enterprise": {"production": "false"}, "watsonx-ai":
-    {"production": "false"}, "watsonx-gov-mm": {"production": "false"}, "watsonx-gov-rc":
-    {"production": "false"}, "watsonx-orchestrate": {"production": "false"}}'
+  applied-entitlements: '{"cpd-enterprise": {"production": "true"}, "watsonx-ai":
+    {"production": "true"}, "watsonx-gov-mm": {"production": "true"}, "watsonx-gov-rc":
+    {"production": "true"}, "watsonx-orchestrate": {"production": "true"}}'
 ```
 
 ---
 
 ## Upgrade IBM Software Hub Platform and Services
+
+#### Upgrade CPD platform
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-upgrading-software-hub)
 
@@ -397,7 +399,17 @@ Login to the cluster
 ${CPDM_OC_LOGIN}
 ```
 
-#### Upgrade CPD platform using install-components
+Confirm the value of 'spec/non_olm' in the Ibmcpd ibmcpd-cr custom resource yaml
+```bash
+echo "Ibmcpd (ibmcpd-cr): non_olm = $(oc get ibmcpd ibmcpd-cr -o jsonpath='{.spec.non_olm}')"
+```
+
+Where the output we want to see is non_olm = true (helm based deployment)
+```bash
+Ibmcpd (ibmcpd-cr): non_olm = true
+```
+
+Upgrade CPD platform
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1527,6 +1539,15 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 ---
 
 #### Upgrade Cognos Analytics
+
+Before starting Cognos upgrade, ensure that the 'spec.enableInstanaMetricCollection' field is set to 'false' in the CAService custom resource
+```bash
+oc get CAService ca-addon-cr  -o yaml | grep -A 10 enableInstanaMetricCollection
+```
+
+**Note**: If 'enableInstanaMetricCollection' is set to 'true' this can prevent the Cognos Analytics upgrade from completing, awaiting confirmation from Development if we can set 'enableInstanaMetricCollection' to 'false' prior to upgrade of Cognos Analytics
+
+Upgrade Cognos Analytics
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
