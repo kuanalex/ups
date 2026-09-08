@@ -838,6 +838,453 @@ oc get deploy -n ${PROJECT_CPD_INST_OPERANDS} | grep wo-
 
 ---
 
+#### Potential Issue - wo-tenant-migration-job is skipped due to timing issue
+
+The wo-tenant-migration-job is supposed to run during the Orchestrate upgrade, but was skipped during the non-prod upgrade (best guess 
+
+In this scenario, the wo-tenant-migration-job will need to be run manually
+
+Create the job yaml file
+```bash
+vi wo-tenant-migration-job.yaml
+```
+
+Copy the contents into the job yaml file
+```bash
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    cloudpakName: IBM watsonx Orchestrate Cartridge for IBM Cloud Pak for Data
+    productChargedContainers: All
+    productCloudpakRatio: "1:1"
+    productMetric: RESOURCE_UNIT
+    productName: IBM watsonx Orchestrate
+    productVersion: 5.4.0
+  labels:
+    app.kubernetes.io/component: components-services
+    app.kubernetes.io/instance: wo
+    app.kubernetes.io/managed-by: ibm-watson-orchestrate-operator
+    app.kubernetes.io/name: watson-orchestrate
+    icpdsupport/addOnId: orchestrate
+    icpdsupport/app: components-services
+    icpdsupport/module: components-services-orchestrate
+    icpdsupport/podSelector: components-services
+    wo.watsonx.ibm.com/application: watson-orchestrate
+    wo.watsonx.ibm.com/component: components-services
+    wo.watsonx.ibm.com/cr-name: wo
+    wo.watsonx.ibm.com/operand-version: 8.0.2
+  name: wo-tenant-data-service-migration
+  namespace: ups-wx-operands
+spec:
+  backoffLimit: 3
+  completionMode: NonIndexed
+  completions: 1
+  manualSelector: false
+  parallelism: 1
+  podReplacementPolicy: TerminatingOrFailed
+  suspend: false
+  template:
+    metadata:
+      annotations:
+        cloudpakId: 6341c0866cd24bb298037e1476bd4e56
+        cloudpakInstanceId: 53071c66-1543-42e6-a0f5-6874e4802720
+        cloudpakName: IBM watsonx Orchestrate Cartridge for IBM Cloud Pak for Data
+        productChargedContainers: All
+        productCloudpakRatio: "1:1"
+        productID: 0be53fb8946d4b82a770f82d60f05657
+        productMetric: RESOURCE_UNIT
+        productName: IBM watsonx Orchestrate
+        productVersion: 5.4.0
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: components-services
+        app.kubernetes.io/instance: wo
+        app.kubernetes.io/managed-by: ibm-watson-orchestrate-operator
+        app.kubernetes.io/name: watson-orchestrate
+        batch.kubernetes.io/job-name: wo-tenant-data-service-migration
+        icpdsupport/addOnId: orchestrate
+        icpdsupport/app: components-services
+        icpdsupport/module: components-services-orchestrate
+        icpdsupport/podSelector: components-services
+        job-name: wo-tenant-data-service-migration
+        wo.watsonx.ibm.com/application: watson-orchestrate
+        wo.watsonx.ibm.com/component: wo-tenant-data-service-migration
+        wo.watsonx.ibm.com/cr-name: wo
+        wo.watsonx.ibm.com/operand-version: 8.0.2
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - s390x
+      containers:
+      - args:
+        - |
+          set -e
+
+          echo "=========================================="
+          echo "Tenant Data Service WXO Migration Job"
+          echo "=========================================="
+          echo "Target DB: $DB_HOST:$DB_PORT/$DB_NAME"
+          echo "=========================================="
+
+          for var in SOURCE_POSTGRES_URL DB_HOST DB_PORT DB_USER DB_PASSWORD DB_NAME MULTI_TENANCY_PLATFORM_ACCOUNT_ID; do
+            eval val=\$$var
+            if [ -z "$val" ]; then
+              echo "ERROR: $var is not set"
+              exit 1
+            fi
+          done
+          echo "Platform account ID: $MULTI_TENANCY_PLATFORM_ACCOUNT_ID"
+
+          SOURCE_DB_HOST=$(python3 -c "from urllib.parse import urlparse; u=urlparse('$SOURCE_POSTGRES_URL'); print(u.hostname)")
+          SOURCE_DB_PORT=$(python3 -c "from urllib.parse import urlparse; u=urlparse('$SOURCE_POSTGRES_URL'); print(u.port or 5432)")
+          SOURCE_DB_USER=$(python3 -c "from urllib.parse import urlparse; u=urlparse('$SOURCE_POSTGRES_URL'); print(u.username or '')")
+          SOURCE_DB_PASSWORD=$(python3 -c "from urllib.parse import urlparse; u=urlparse('$SOURCE_POSTGRES_URL'); print(u.password or '')")
+          SOURCE_DB_NAME=$(python3 -c "from urllib.parse import urlparse; u=urlparse('$SOURCE_POSTGRES_URL'); print(u.path.lstrip('/').split('?')[0])")
+
+          if [ -z "$SOURCE_DB_HOST" ]; then
+            echo "ERROR: Failed to parse SOURCE_POSTGRES_URL"
+            exit 1
+          fi
+          echo "Source DB: $SOURCE_DB_HOST:$SOURCE_DB_PORT/$SOURCE_DB_NAME"
+
+          RETRY_COUNT=${DB_CONNECTION_RETRY_COUNT:-12}
+          RETRY_DELAY=${DB_CONNECTION_RETRY_DELAY:-5}
+          CONNECTION_TIMEOUT=${DB_CONNECTION_TIMEOUT:-5}
+
+          echo "Waiting for target PostgreSQL..."
+          i=1
+          while [ "$i" -le "$RETRY_COUNT" ]; do
+            if timeout "$CONNECTION_TIMEOUT" sh -c "echo > /dev/tcp/$DB_HOST/$DB_PORT" 2>/dev/null; then
+              echo "✓ Target PostgreSQL is reachable"
+              break
+            fi
+            echo "Attempt $i/$RETRY_COUNT: waiting for target... (retrying in ${RETRY_DELAY}s)"
+            sleep "$RETRY_DELAY"
+            i=$((i + 1))
+          done
+          if ! timeout "$CONNECTION_TIMEOUT" sh -c "echo > /dev/tcp/$DB_HOST/$DB_PORT" 2>/dev/null; then
+            echo "ERROR: Could not connect to target PostgreSQL after $RETRY_COUNT attempts"
+            exit 1
+          fi
+
+          echo "Waiting for source PostgreSQL..."
+          i=1
+          while [ "$i" -le "$RETRY_COUNT" ]; do
+            if timeout "$CONNECTION_TIMEOUT" sh -c "echo > /dev/tcp/$SOURCE_DB_HOST/$SOURCE_DB_PORT" 2>/dev/null; then
+              echo "✓ Source PostgreSQL is reachable"
+              break
+            fi
+            echo "Attempt $i/$RETRY_COUNT: waiting for source... (retrying in ${RETRY_DELAY}s)"
+            sleep "$RETRY_DELAY"
+            i=$((i + 1))
+          done
+          if ! timeout "$CONNECTION_TIMEOUT" sh -c "echo > /dev/tcp/$SOURCE_DB_HOST/$SOURCE_DB_PORT" 2>/dev/null; then
+            echo "ERROR: Could not connect to source PostgreSQL after $RETRY_COUNT attempts"
+            exit 1
+          fi
+
+          echo "=========================================="
+          echo "Checking migration status..."
+          echo "=========================================="
+          export PGPASSWORD="$DB_PASSWORD"
+
+          OLD_SCHEMA_COUNT=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc "
+            SELECT COUNT(*) FROM tenant_snapshots
+            WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+              AND tenant_data ? 'tenant'
+              AND NOT tenant_data ? 'tenantName'
+          " 2>/dev/null || echo "0")
+
+          ALREADY_MIGRATED=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc "
+            SELECT EXISTS (
+              SELECT 1 FROM tenant_snapshots
+              WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+              LIMIT 1
+            )" 2>/dev/null || echo "f")
+
+          if [ "$OLD_SCHEMA_COUNT" != "0" ]; then
+            echo "⚠ Found $OLD_SCHEMA_COUNT row(s) with old event-envelope schema — will heal via upsert."
+          else
+            echo "✓ Target DB is clean — proceeding with fresh migration."
+          fi
+
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc \
+            "CREATE EXTENSION IF NOT EXISTS dblink;" 2>/dev/null || true
+
+          export PGPASSWORD="$SOURCE_DB_PASSWORD"
+          SOURCE_TENANT_COUNT=$(psql -h "$SOURCE_DB_HOST" -p "$SOURCE_DB_PORT" -U "$SOURCE_DB_USER" \
+            -d "$SOURCE_DB_NAME" -tAc "SELECT COUNT(*) FROM tenants" 2>/dev/null || echo "0")
+          SOURCE_EVENT_COUNT=$(psql -h "$SOURCE_DB_HOST" -p "$SOURCE_DB_PORT" -U "$SOURCE_DB_USER" \
+            -d "$SOURCE_DB_NAME" -tAc "SELECT COUNT(*) FROM events" 2>/dev/null || echo "0")
+
+          echo "Source — tenants: $SOURCE_TENANT_COUNT  events: $SOURCE_EVENT_COUNT"
+
+          if [ "$SOURCE_TENANT_COUNT" -eq "0" ] && [ "$SOURCE_EVENT_COUNT" -eq "0" ]; then
+            echo "INFO: Source DB is empty (fresh install). Nothing to migrate."
+            exit 0
+          fi
+
+          echo "=========================================="
+          echo "Migrating tenants → tenant_snapshots..."
+          echo "=========================================="
+          export PGPASSWORD="$DB_PASSWORD"
+
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 << ENDSQL
+          INSERT INTO tenant_snapshots (id, account_id, status, tenant_data, created_at, updated_at, synced_at)
+          SELECT
+            t.id,
+            '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID',
+            CASE WHEN t.disabled THEN 'suspended' ELSE 'active' END,
+            jsonb_build_object(
+              'tenantId',      t.id,
+              'tenantName',    COALESCE(t.name, t.id),
+              'tenantType',    'onprem',
+              'status',        CASE WHEN t.disabled THEN 'DISABLED' ELSE 'ACTIVE' END,
+              'accountId',     '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID',
+              'crn',           '',
+              'tenantCRN',     t.id,
+              'createdAt',     to_char(COALESCE(t.created_on, NOW()) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+              'updatedAt',     to_char(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+              'tenantOwner',   jsonb_build_object('id', '', 'username', ''),
+              'metadata',      '{}'::jsonb,
+              'zenServiceInstanceInfo', jsonb_build_object(
+                'zenServiceInstanceId',       t.id,
+                'zenCloudPakInstanceId',       '',
+                'zenControlPlaneNamespace',    '',
+                'zenImageRegistryPrefix',      '',
+                'zenServiceInstanceType',      'orchestrate',
+                'zenServiceInstanceUID',       '',
+                'zenServiceInstanceUserName',  '',
+                'zenServiceInstanceVersion',   '',
+                'zenServiceInstanceSecret',    ''
+              ),
+              'instanceId',      null,
+              'planId',          'ONPREM',
+              'clusterDomain',   null,
+              'countryCode',     'US',
+              'organizationId',  '',
+              'provisioningStatus', jsonb_build_object(
+                'state',            CASE WHEN t.disabled THEN 'DISABLED' ELSE 'ACTIVE' END,
+                'progressStatus',   100,
+                'is_isolated',      false,
+                'cluster',          jsonb_build_object(
+                  'clusterDomain', null,
+                  'state',         CASE WHEN t.disabled THEN 'DISABLED' ELSE 'ACTIVE' END
+                )
+              )
+            ),
+            COALESCE(t.created_on, NOW()),
+            NOW(),
+            NOW()
+          FROM dblink(
+            'host=$SOURCE_DB_HOST port=$SOURCE_DB_PORT dbname=$SOURCE_DB_NAME user=$SOURCE_DB_USER password=$SOURCE_DB_PASSWORD sslmode=require',
+            'SELECT id, name, disabled, created_on FROM tenants'
+          ) AS t(id text, name text, disabled boolean, created_on timestamptz)
+          ON CONFLICT (id) DO UPDATE SET
+            tenant_data = EXCLUDED.tenant_data,
+            status      = EXCLUDED.status,
+            updated_at  = EXCLUDED.updated_at,
+            synced_at   = EXCLUDED.synced_at;
+          ENDSQL
+
+          MIGRATED_TENANT_COUNT=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc \
+            "SELECT COUNT(*) FROM tenant_snapshots WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'")
+          echo "✓ tenant_snapshots: $MIGRATED_TENANT_COUNT rows"
+
+          echo "=========================================="
+          echo "Migrating events → events..."
+          echo "=========================================="
+
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 << ENDSQL
+          INSERT INTO events (
+            id, account_id, tenant_id, event_type, payload, processed,
+            user_id, created_by, updated_by, event_id, consumer_responses,
+            created_on, updated_at
+          )
+          SELECT
+            e.id::text,
+            '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID',
+            e.tenant_id,
+            e.event_type,
+            COALESCE(e.payload, '{}'::jsonb),
+            COALESCE(e.processed, false),
+            e.user_id,
+            e.created_by,
+            e.updated_by,
+            e.event_id,
+            e.consumer_responses,
+            e.created_on,
+            e.updated_at
+          FROM dblink(
+            'host=$SOURCE_DB_HOST port=$SOURCE_DB_PORT dbname=$SOURCE_DB_NAME user=$SOURCE_DB_USER password=$SOURCE_DB_PASSWORD sslmode=require',
+            'SELECT id::text, tenant_id, event_type::text, payload, processed, user_id, created_by, updated_by, event_id, consumer_responses, created_on, updated_at FROM events'
+          ) AS e(id text, tenant_id text, event_type text, payload jsonb, processed boolean,
+                 user_id text, created_by text, updated_by text, event_id text,
+                 consumer_responses jsonb, created_on timestamptz, updated_at timestamptz)
+          ON CONFLICT (id) DO NOTHING;
+          ENDSQL
+
+          MIGRATED_EVENT_COUNT=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc \
+            "SELECT COUNT(*) FROM events WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'")
+          echo "✓ events: $MIGRATED_EVENT_COUNT rows"
+
+          echo "Backfilling subscriptions..."
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 << ENDSQL
+          INSERT INTO subscriptions (id, tenant_id, subscription_id, crn, subscription_details, status, created_at, updated_at)
+          SELECT
+            gen_random_uuid(),
+            id AS tenant_id,
+            COALESCE(tenant_data->'subscriptions'->>'subscriptionId', id),
+            NULL,
+            jsonb_build_object(
+              'partNumber', 'ONPREM',
+              'accountId',  '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+            ),
+            COALESCE(tenant_data->'subscriptions'->>'status', 'ACTIVE'),
+            created_at,
+            NOW()
+          FROM tenant_snapshots
+          WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+          ON CONFLICT (tenant_id, subscription_id) DO NOTHING;
+          ENDSQL
+          echo "✓ subscriptions backfilled"
+
+          echo "Backfilling ip_allowlists..."
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 << ENDSQL
+          INSERT INTO ip_allowlists (id, subscription_id, crn, ip_ranges, enabled, created_at, updated_at)
+          SELECT
+            gen_random_uuid(),
+            s.subscription_id,
+            NULL,
+            '[]'::jsonb,
+            false,
+            NOW(),
+            NOW()
+          FROM subscriptions s
+          JOIN tenant_snapshots ts ON ts.id = s.tenant_id
+          WHERE ts.account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+          ON CONFLICT (subscription_id) DO NOTHING;
+          ENDSQL
+          echo "✓ ip_allowlists backfilled"
+
+          echo "=========================================="
+          echo "Migration complete. Final counts:"
+          echo "=========================================="
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tA << ENDSQL
+          SELECT 'tenant_snapshots' AS table_name, COUNT(*) AS rows
+            FROM tenant_snapshots WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+          UNION ALL
+          SELECT 'events', COUNT(*)
+            FROM events WHERE account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+          UNION ALL
+          SELECT 'subscriptions', COUNT(*)
+            FROM subscriptions s
+            JOIN tenant_snapshots ts ON ts.id = s.tenant_id
+            WHERE ts.account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID'
+          UNION ALL
+          SELECT 'ip_allowlists', COUNT(*)
+            FROM ip_allowlists il
+            JOIN subscriptions s ON s.subscription_id = il.subscription_id
+            JOIN tenant_snapshots ts ON ts.id = s.tenant_id
+            WHERE ts.account_id = '$MULTI_TENANCY_PLATFORM_ACCOUNT_ID';
+          ENDSQL
+          echo "=========================================="
+        command:
+        - /bin/sh
+        - -c
+        env:
+        - name: DB_HOST
+          value: wo-watson-orchestrate-postgresedb-rw.cpd-instance-1.svc.cluster.local
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              key: DB_USER
+              name: wo-watson-orchestrate-pg-secret
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: DB_PASSWORD
+              name: wo-watson-orchestrate-pg-secret
+        - name: DB_NAME
+          value: tenantdataservicedb
+        - name: DB_SSLMODE
+          value: require
+        - name: SOURCE_POSTGRES_URL
+          valueFrom:
+            secretKeyRef:
+              key: DB_CONNECTION_URI_ARCHER
+              name: wo-watson-orchestrate-pg-secret
+        - name: SOURCE_DB_SSL_MODE
+          value: require
+        - name: MULTI_TENANCY_PLATFORM_ACCOUNT_ID
+          valueFrom:
+            configMapKeyRef:
+              key: MULTI_TENANCY_PLATFORM_ACCOUNT_ID
+              name: product-configmap
+        - name: WXO_DEPLOYMENT_PLATFORM
+          value: onprem
+        - name: DB_CONNECTION_RETRY_COUNT
+          value: "12"
+        - name: DB_CONNECTION_RETRY_DELAY
+          value: "5"
+        - name: DB_CONNECTION_TIMEOUT
+          value: "5"
+        image: cp.stg.icr.io/cp/watsonx-orchestrate/ibm-watsonx-orchestrate-onprem-utils@sha256:2a33735667284a657367b31ff800dd75a40dd8038af1f1be517a93c06345826b
+        imagePullPolicy: Always
+        name: migrate-wxo-data
+        resources:
+          limits:
+            cpu: 500m
+            ephemeral-storage: 1Gi
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            ephemeral-storage: 100Mi
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+      - name: ibm-entitlement-key
+      restartPolicy: OnFailure
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: wo-watson-orchestrate-no-perm
+      serviceAccountName: wo-watson-orchestrate-no-perm
+      terminationGracePeriodSeconds: 30
+  ttlSecondsAfterFinished: 86400
+```
+
+Apply the job yaml
+```bash
+oc apply -f wo-tenant-migration-job.yaml
+```
+
+Monitor the status of the wo-tenant-migration-job job and the Orchestrate custom resource
+```bash
+oc get wo wo-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
+```
+
+---
+
 #### Post upgrade task 1 for Watsonx Orchestrate
 
 Login to Red Hat OpenShift cluster
@@ -1304,7 +1751,7 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 ---
 
-#### Potential Issue - WML PVC Sizing and Memory Issues
+#### Potential Issue - WML Operator PVC Sizing and Memory Issues
 
 During wx_ai upgrade, the WML operator can encounter an error related to PVC sizing and memory
 
@@ -2001,6 +2448,37 @@ fi
 ---
 
 ## Post Upgrade Validation
+
+#### Potential Issue - Chat with docs cleanup job fails due to insufficient memory after upgrade
+
+After upgrading from 5.3.0 to 5.3.1 Patch 3 or Patch 5, the wo-chat-with-docs-expiry-cronjob pod fails with an OOMKilled error. The pod's memory limit is set to 200Mi, which may be insufficient when processing multiple knowledge bases or chat-with-docs resources that need to be deleted. 
+
+The job performs several memory-intensive operations including:
+-Multiple Postgres queries and updates to remove knowledge bases and related sub-resources
+-Milvus vector store cleanup operations
+-S3 document deletion
+-HTTP requests to TRM (Tools Runtime Manager) to remove tool deployments
+
+To resolve this issue, increase the memory limit for the chat with docs expiry cronjob
+```bash
+oc patch cronjob wo-chat-with-docs-expiry-cronjob \
+-n ${PROJECT_CPD_INST_OPERANDS} \
+--type='json' \
+-p='[
+  {
+    "op": "add",
+    "path": "/spec/jobTemplate/spec/template/spec/containers/0/resources",
+    "value": {
+      "requests": {
+        "memory": "512Mi"
+      },
+      "limits": {
+        "memory": "1Gi"
+      }
+    }
+  }
+]'
+```
 
 #### Potential Issue - Enable WxO Observability
 
