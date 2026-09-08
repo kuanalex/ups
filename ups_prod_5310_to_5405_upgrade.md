@@ -1422,7 +1422,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Watson Speech
 
-Upgrade Watson speech
+Upgrade Watson Speech
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1459,6 +1459,8 @@ spec:
 ---
 
 #### Upgrade Voice Gateway
+
+Upgrade Voice Gateway
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1485,7 +1487,9 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 ---
 
-#### Upgrade Analyicsengine
+#### Upgrade Analytics Engine
+
+Upgrade Analytics Engine service
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1511,7 +1515,9 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 ---
 
-#### Upgrade Db2 OLTP
+#### Upgrade Db2oltp
+
+Upgrade Db2 service
 ```bash
 cpd-cli manage install-components \
 --license_acceptance=true \
@@ -1570,6 +1576,129 @@ watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Complete
 Check the Cognos analytics custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=cognos_analytics
+```
+
+---
+
+#### Potential Issue - Cognos Analytics upgrade blocked ibm-cognos-addon-sp-deployment in CrashLoopBackOff
+
+During the UPS non-prod upgrade of Cognos Analytics, we encountered an issue with the ibm-cognos-addon-sp-deployment in CrashLoopBackOff
+
+The permanent fix has been delivered to 31.0.0 branch which is targeted for CPD 6.0.0 release, meanwhile here is the documentation for the workaround
+
+Fix the CrashLoopBackOff by first patching the caservice custom resource
+```bash
+oc patch caservices ca-addon-cr \
+  -n <NAMESPACE> \
+  --type=merge \
+  -p '{"spec":{"enableInstanaMetricCollection": false}}'
+```
+
+Wait for the pod to recover
+```bash
+oc get pods -n <NAMESPACE> -l app=ibm-cognos-addon-sp -w
+# Wait for: ibm-cognos-addon-sp-deployment-xxx   1/1   Running   0
+```
+
+Wait for CAService to complete
+```bash
+oc get caservices ca-addon-cr -n <NAMESPACE> -w
+# Wait for STATUS: Completed, PROGRESS: 100%
+```
+
+Set environment variables
+```bash
+NAMESPACE=ups-wx-operands
+```
+
+Get admin credentials
+```bash
+# Check IAM mode
+isIAMEnabled=$(oc get zenservice lite-cr -n ${NAMESPACE} \
+  -o jsonpath={.spec.iamIntegration})
+echo "IAM enabled: $isIAMEnabled"
+
+# If true:
+ca_password=$(oc -n ${NAMESPACE} get secret platform-auth-idp-credentials \
+  -o jsonpath='{.data.admin_password}' | base64 --decode)
+ca_user=$(oc -n ${NAMESPACE} get secret platform-auth-idp-credentials \
+  -o jsonpath='{.data.admin_username}' | base64 --decode)
+
+# If false:
+ca_password=$(oc get secret admin-user-details \
+  -o jsonpath='{.data.initial_admin_password}' -n ${NAMESPACE} | base64 --decode)
+ca_user="admin"
+
+echo "User: $ca_user  Pass length: ${#ca_password}"
+```
+
+Get a bearer token from inside the sp pod
+```bash
+SP_CONTAINER=$(oc get po -n ${NAMESPACE} | grep ibm-cognos-addon-sp | awk '{print $1}')
+INSTANCE_ID=$(oc get po -n ${NAMESPACE} | grep artifacts | cut -d '-' -f1 | cut -d 'a' -f2)
+
+echo "SP pod:      $SP_CONTAINER"
+echo "Instance ID: $INSTANCE_ID"
+
+# Get token via internal nginx (works on both IAM and non-IAM clusters)
+BEARER=$(oc exec -n ${NAMESPACE} -it ${SP_CONTAINER} -- \
+  curl -s -k -X POST \
+  -H 'Content-Type: application/json' \
+  -d "{\"username\":\"${ca_user}\",\"password\":\"${ca_password}\"}" \
+  "https://internal-nginx-svc.${NAMESPACE}.svc.cluster.local:12443/icp4d-api/v1/authorize" \
+  | jq -r '.token')
+
+JWT_TOKEN="Authorization: Bearer $BEARER"
+echo "Token acquired: ${BEARER:0:30}..."
+# Must start with eyJ — if empty, check credentials from Step 2
+```
+
+Verify current Zen status
+```bash
+ZENURL="https://zen-core-api-svc.${NAMESPACE}.svc:4444/v3/service_instances"
+
+before_status=$(oc exec -n ${NAMESPACE} -it ${SP_CONTAINER} -- \
+  curl -s -L "${ZENURL}/${INSTANCE_ID}" -H "${JWT_TOKEN}" -k)
+
+echo $before_status | jq -r '.service_instance | {provision_status, addon_version}'
+```
+
+Patch the CAServiceInstance CR
+```bash
+oc patch CAServiceInstance ca${INSTANCE_ID}-cr \
+  --type merge \
+  -p '{"spec":{"version":"30.0.4"}}' \
+  -n ${NAMESPACE}
+```
+
+Update Zen service instance metadata to UPGRADED
+```bash
+oc exec -n ${NAMESPACE} -it ${SP_CONTAINER} -- \
+  curl -s -X PATCH -L "${ZENURL}/${INSTANCE_ID}/meta" \
+  -H "${JWT_TOKEN}" -k \
+  -H 'Content-Type: application/json' \
+  -d '{"provision_status": "UPGRADED", "service_instance_version": "30.0.4"}'
+```
+
+Verify the cognos instance status
+```bash
+cpd-cli service-instance list \
+  --profile=${CPD_PROFILE_NAME} \
+  --service-type=cognos-analytics-app
+```
+
+Expected result
+```bash
+Expected: Version: 30.0.4  |  Provision status: UPGRADED  |  Upgrade version option: []
+```
+
+**Permanent Fix**: Fixed in ibm-cognos-addon-sp:2.2.8 (digest sha256:450720b2...), shipping in CA 31.0.0, the OpenTelemetry dependencies have been updated for Node.js v22 compatibility
+
+Once 31.0.0 is available, or if a hotfix digest is provided for 30.0.4, apply it via
+```bash
+oc patch caservices ca-addon-cr -n <NAMESPACE> --type=merge \
+  -p '{"spec":{"hotfix_digests":{"ibm_cognos_addon_sp":"sha256:450720b26835a99f7853063f4fd39b1e03e4e6beae1c7d67f626684009768192"}}}'
+After the hotfix image is running and confirmed healthy, enableInstanaMetricCollection can be safely re-enabled if required.
 ```
 
 ---
@@ -1639,10 +1768,7 @@ cpd-cli service-instance list --profile=${CPD_PROFILE_NAME}
 
 Upgrading the service instance
 ```bash
-cpd-cli service-instance upgrade \
---service-type=spark \
---profile=${CPD_PROFILE_NAME} \
---all
+cpd-cli service-instance upgrade --service-type=spark --profile=${CPD_PROFILE_NAME} --all
 ```
 
 Validating the service instance upgrade status
