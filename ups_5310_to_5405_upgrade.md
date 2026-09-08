@@ -1,4 +1,4 @@
-# UPS Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
+# UPS Non-Production Cluster CP4D 5.3.1.0 to 5.4.0.5 Upgrade
 ## Author: Alex Kuan (alex.kuan@ibm.com)
 
 **From:**
