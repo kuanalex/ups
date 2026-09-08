@@ -720,6 +720,458 @@ wo     5.4.0     Patch 5 (8.0.2)   True    All Deployed          45/45      45/4
 
 ---
 
+#### Potential Issue - IFM Operator reports a PVC error at 82.5% progress 
+
+Check the ifm operator log for errors
+```bash
+oc describe po ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ups-wx-operators
+```
+
+Look for this particular error message
+```bash
+message: |- Failed to patch object: b'{"kind":"Status","apiVersion":"v1","metadata":{},"status":"Failure","message":"PersistentVolumeClaim \\"wx-inference-proxy-cos-rev2\\" is invalid: spec.resources.requests.storage: Forbidden: field can not be less than status.capacity","reason":"Invalid","details":{"name":"wx-inference-proxy-cos-rev2","kind":"PersistentVolumeClaim","causes":[{"reason":"FieldValueForbidden","message":"Forbidden: field can not be less than status.capacity","field":"spec.resources.requests.storage"}]},"code":422}\n'
+```
+
+Kubernetes rejects an attempt to modify the PersistentVolumeClaim (PVC) named wx-inference-proxy-cos-rev2 because the configuration tried to set spec.resources.requests.storage to a value smaller than the current status.capacity
+
+Kubernetes does not allow shrinking the storage request of an existing PVC below its provisioned capacity
+
+Daniel created the following hotfix script which resolves the 422 Forbidden validation error where the operator tries to provision the wx-inference-proxy-cos-rev2 PVC with a hardcoded 10Gi storage size that conflicts with an existing or higher expectation
+
+It updates the parameter template from 10Gi to 100Gi directly inside a running IFM operator pod
+
+Create the workaround utility
+```bash
+vi ifm-inf-proxy-pvc-template-hotfix.sh
+```
+
+Copy the contents into the file
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Temporary IFM operator workaround.
+#
+# Replaces this value in /opt/ansible/13.0.4/cpd_params.yaml.j2:
+#
+#   wx_inference_deployment:
+#     inf_proxy_pvc_size: 10Gi
+#
+# with:
+#
+#   wx_inference_deployment:
+#     inf_proxy_pvc_size: 100Gi
+#
+# The change is made inside the replacement operator pod and will be lost if
+# that pod is subsequently replaced. Remove this workaround when IBM provides
+# a supported, durable fix.
+
+OP_NS=${OP_NS:-ups-wx-operators}
+DEPLOY=${DEPLOY:-ibm-cpd-watsonx-ai-ifm-operator}
+TARGET_FILE=${TARGET_FILE:-/opt/ansible/13.0.4/cpd_params.yaml.j2}
+BACKUP_SUFFIX=.pre-temporary-ifm-inf-proxy-pvc-fix
+
+EXPECTED_OLD=10Gi
+EXPECTED_NEW=100Gi
+
+echo "===== Resolve IFM operator Deployment ====="
+
+if ! oc get deployment "$DEPLOY" -n "$OP_NS" >/dev/null 2>&1; then
+  echo "ERROR: Deployment $DEPLOY was not found in namespace $OP_NS."
+  echo "Override OP_NS or DEPLOY if the operator uses different values."
+  exit 1
+fi
+
+OP_SELECTOR=$(
+  oc get deployment "$DEPLOY" -n "$OP_NS" -o json |
+  jq -r '
+    .spec.selector.matchLabels
+    | to_entries
+    | map("\(.key)=\(.value)")
+    | join(",")
+  '
+)
+
+if [ -z "$OP_SELECTOR" ] || [ "$OP_SELECTOR" = "null" ]; then
+  echo "ERROR: Could not derive the pod selector from Deployment $DEPLOY."
+  exit 1
+fi
+
+echo "Namespace:  $OP_NS"
+echo "Deployment: $DEPLOY"
+echo "Selector:   $OP_SELECTOR"
+echo "File:       $TARGET_FILE"
+
+echo
+echo "===== Current operator pod ====="
+
+OLD_POD=$(
+  oc get pod -n "$OP_NS" -l "$OP_SELECTOR" -o json |
+  jq -r '
+    .items[]
+    | select(.metadata.deletionTimestamp == null)
+    | .metadata.name
+  ' |
+  head -1
+)
+
+if [ -z "$OLD_POD" ]; then
+  echo "ERROR: Current IFM operator pod was not found."
+  exit 1
+fi
+
+OLD_UID=$(oc get pod "$OLD_POD" -n "$OP_NS" -o jsonpath='{.metadata.uid}')
+
+echo "Old pod: $OLD_POD"
+echo "Old UID: $OLD_UID"
+
+echo
+echo "===== Preflight target validation ====="
+
+PREFLIGHT_RESULT=$(
+  oc exec -n "$OP_NS" "$OLD_POD" -- sh -c '
+    set -eu
+    file=$1
+
+    if [ ! -f "$file" ]; then
+      echo "ERROR:file-not-found"
+      exit 1
+    fi
+
+    old_count=$(
+      awk '\''
+        $0 == "wx_inference_deployment:" { in_section=1; next }
+        in_section && /^[^[:space:]]/ { in_section=0 }
+        in_section && /^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*10Gi[[:space:]]*$/ { count++ }
+        END { print count + 0 }
+      '\'' "$file"
+    )
+
+    new_count=$(
+      awk '\''
+        $0 == "wx_inference_deployment:" { in_section=1; next }
+        in_section && /^[^[:space:]]/ { in_section=0 }
+        in_section && /^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*100Gi[[:space:]]*$/ { count++ }
+        END { print count + 0 }
+      '\'' "$file"
+    )
+
+    if [ -w "$file" ]; then
+      writable=yes
+    else
+      writable=no
+    fi
+
+    printf "old_count=%s new_count=%s writable=%s\n" \
+      "$old_count" "$new_count" "$writable"
+  ' sh "$TARGET_FILE"
+)
+
+echo "$PREFLIGHT_RESULT"
+
+if [ "$PREFLIGHT_RESULT" = "old_count=0 new_count=1 writable=yes" ]; then
+  echo "The current operator pod already contains the requested 100Gi value."
+  echo "No pod was deleted and no file was changed."
+  exit 0
+fi
+
+if [ "$PREFLIGHT_RESULT" = "old_count=1 new_count=0 writable=no" ]; then
+  echo "ERROR: The target file is not writable by the operator container user."
+  echo "No pod was deleted."
+  exit 1
+fi
+
+if [ "$PREFLIGHT_RESULT" != "old_count=1 new_count=0 writable=yes" ]; then
+  echo "ERROR: Expected exactly one $EXPECTED_OLD value and no $EXPECTED_NEW value"
+  echo "inside wx_inference_deployment, and expected the file to be writable."
+  echo "No pod was deleted."
+  exit 1
+fi
+
+echo "PASS: Found exactly one target value: inf_proxy_pvc_size: $EXPECTED_OLD"
+
+echo
+echo "===== Delete old operator pod ====="
+
+oc delete pod "$OLD_POD" -n "$OP_NS" --wait=false
+
+echo
+echo "===== Wait for replacement pod ====="
+
+NEW_POD=""
+DEADLINE=$((SECONDS + 300))
+
+while [ "$SECONDS" -lt "$DEADLINE" ]; do
+  NEW_POD=$(
+    oc get pod -n "$OP_NS" -l "$OP_SELECTOR" -o json 2>/dev/null |
+    jq -r --arg OLD_UID "$OLD_UID" '
+      .items[]
+      | select(.metadata.uid != $OLD_UID)
+      | select(.metadata.deletionTimestamp == null)
+      | .metadata.name
+    ' |
+    head -1
+  )
+
+  if [ -n "$NEW_POD" ]; then
+    echo "Replacement pod created: $NEW_POD"
+    break
+  fi
+
+  echo "Still waiting for replacement pod..."
+  sleep 2
+done
+
+if [ -z "$NEW_POD" ]; then
+  echo "ERROR: Replacement operator pod was not created within five minutes."
+  exit 1
+fi
+
+echo
+echo "===== Wait until oc exec is available ====="
+
+EXEC_READY=false
+DEADLINE=$((SECONDS + 300))
+
+while [ "$SECONDS" -lt "$DEADLINE" ]; do
+  if oc exec -n "$OP_NS" "$NEW_POD" -- true >/dev/null 2>&1; then
+    EXEC_READY=true
+    break
+  fi
+
+  echo "Container is not yet accepting oc exec..."
+  sleep 2
+done
+
+if [ "$EXEC_READY" != true ]; then
+  echo "ERROR: Could not execute commands in $NEW_POD."
+  exit 1
+fi
+
+echo "Container is accepting oc exec."
+
+echo
+echo "===== Apply IFM template workaround ====="
+
+oc exec -n "$OP_NS" "$NEW_POD" -- sh -c '
+  set -eu
+
+  file=$1
+  backup_suffix=$2
+
+  if [ ! -f "$file" ]; then
+    echo "ERROR: Target file does not exist: $file"
+    exit 1
+  fi
+
+  if [ ! -w "$file" ]; then
+    echo "ERROR: Target file is not writable: $file"
+    echo "Container identity:"
+    id
+    echo "Target permissions:"
+    ls -ld "$(dirname "$file")" "$file"
+    exit 1
+  fi
+
+  count_value() {
+    expected=$1
+
+    awk -v expected="$expected" '\''
+      $0 == "wx_inference_deployment:" { in_section=1; next }
+      in_section && /^[^[:space:]]/ { in_section=0 }
+      in_section && $0 ~ "^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*" expected "[[:space:]]*$" { count++ }
+      END { print count + 0 }
+    '\'' "$file"
+  }
+
+  old_count=$(count_value 10Gi)
+  new_count=$(count_value 100Gi)
+
+  if [ "$old_count" -eq 0 ] && [ "$new_count" -eq 1 ]; then
+    echo "Target value is already 100Gi; no change is required."
+    exit 0
+  fi
+
+  if [ "$old_count" -ne 1 ] || [ "$new_count" -ne 0 ]; then
+    echo "ERROR: Refusing to modify an unexpected target state."
+    echo "old_count=$old_count new_count=$new_count"
+    exit 1
+  fi
+
+  backup_file="/tmp/$(basename "$file")${backup_suffix}"
+
+  if [ ! -e "$backup_file" ]; then
+    cp "$file" "$backup_file"
+    echo "Backup created: $backup_file"
+  else
+    echo "Backup already exists: $backup_file"
+  fi
+
+  temporary_file="/tmp/$(basename "$file").temporary-ifm-fix.$$"
+  trap '\''rm -f "$temporary_file"'\'' EXIT HUP INT TERM
+
+  awk '\''
+    $0 == "wx_inference_deployment:" {
+      in_section=1
+      print
+      next
+    }
+
+    in_section && /^[^[:space:]]/ {
+      in_section=0
+    }
+
+    in_section && /^[[:space:]]*inf_proxy_pvc_size:[[:space:]]*10Gi[[:space:]]*$/ {
+      sub(/10Gi[[:space:]]*$/, "100Gi")
+      replacements++
+    }
+
+    { print }
+
+    END {
+      if (replacements != 1) {
+        exit 42
+      }
+    }
+  '\'' "$file" > "$temporary_file" || {
+    rc=$?
+    echo "ERROR: Failed to generate the patched file (rc=$rc)."
+    exit "$rc"
+  }
+
+  cat "$temporary_file" > "$file"
+  rm -f "$temporary_file"
+  trap - EXIT HUP INT TERM
+
+  old_count=$(count_value 10Gi)
+  new_count=$(count_value 100Gi)
+
+  if [ "$old_count" -ne 0 ] || [ "$new_count" -ne 1 ]; then
+    echo "ERROR: Post-change validation failed."
+    echo "old_count=$old_count new_count=$new_count"
+    exit 1
+  fi
+
+  echo "Changed exactly one value inside wx_inference_deployment:"
+  echo "  OLD: inf_proxy_pvc_size: 10Gi"
+  echo "  NEW: inf_proxy_pvc_size: 100Gi"
+
+  echo
+  echo "Final wx_inference_deployment section:"
+  awk '\''
+    $0 == "wx_inference_deployment:" { in_section=1 }
+    in_section && NR != start && /^[^[:space:]]/ && $0 != "wx_inference_deployment:" { exit }
+    in_section { print NR ":" $0; start=NR }
+  '\'' "$file"
+' sh "$TARGET_FILE" "$BACKUP_SUFFIX"
+
+PATCH_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+echo
+echo "Template patched at: $PATCH_TIME"
+
+echo
+echo "===== Wait for operator pod readiness ====="
+
+oc wait pod/"$NEW_POD" \
+  -n "$OP_NS" \
+  --for=condition=Ready \
+  --timeout=300s
+
+echo
+echo "===== Replacement operator pod ====="
+
+oc get pod "$NEW_POD" -n "$OP_NS" \
+  -o custom-columns='NAME:.metadata.name,UID:.metadata.uid,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount,STARTED:.status.containerStatuses[0].state.running.startedAt'
+
+echo
+echo "Temporary IFM workaround successfully applied."
+echo "Patched operator pod: $NEW_POD"
+echo "Patched file:         $TARGET_FILE"
+echo "Patch time:           $PATCH_TIME"
+echo
+echo "Do not restart or delete this operator pod; the in-container change is temporary."
+```
+
+Run the script
+```bash
+./ifm-inf-proxy-pvc-template-hotfix.sh
+```
+
+Monitor the ifm operator logs to ensure that the PVC issue is addressed
+```bash
+oc logs ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ups-wx-operators
+```
+
+Check for any errors in the operator pod yaml directly
+```bash
+oc describe po ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ups-wx-operators
+```
+
+---
+
+#### Potential Issue - Watsonx Orchestrate Deployments Blocked by Duplicate Volume Mount Path Conflict
+
+IBM Cloud Pak for Data (CPD) has a feature where it can automatically inject its own trusted certificate bundle into pods — it does this via a Kubernetes webhook that intercepts pods at the moment they're created and adds an extra volume mount pointing to /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+
+In WO release 5.4.2, IBM added native support for custom certificates directly inside the WO operator — so WO components now mount their own certificate bundle at that same path (/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem) via the wo-platform-certs volume
+
+Both are now trying to mount something at the exact same path at the same time. Kubernetes strictly forbids this — every volume mount path in a container must be unique. So when a new pod is created, Kubernetes rejects it immediately with
+```bash
+spec.containers[0].volumeMounts[x].mountPath: Invalid value: "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem": must be unique
+```
+
+Several wxo deployments are impacted by this issue, which prevents the deployment pods from starting up properly
+
+The following procedure describes the workaround used to address the duplicate volume mount path conflicts
+
+Patch the 'cpd-config-ac-webhook-cfg-ups-wx-operands' mutatingwebhookconfiguration 
+```bash
+oc patch mutatingwebhookconfiguration cpd-config-ac-webhook-cfg-ups-wx-operands \
+  --type=json \
+  -p='[
+    {
+      "op": "add",
+      "path": "/webhooks/0/objectSelector/matchExpressions/-",
+      "value": {
+        "key": "wo.watsonx.ibm.com/component",
+        "operator": "DoesNotExist"
+      }
+    }
+  ]'
+```
+
+Copy of custom ca secret
+```bash
+NS=ups-wx-operands
+SOURCE_SECRET=cpd-custom-ca-certs
+TARGET_SECRET=wo-custom-certs
+
+oc get secret "$SOURCE_SECRET" -n "$NS" -o json |
+jq \
+  --arg name "$TARGET_SECRET" \
+  --arg namespace "$NS" \
+  '{
+    apiVersion: "v1",
+    kind: "Secret",
+    metadata: {
+      name: $name,
+      namespace: $namespace
+    },
+    type: .type,
+    data: .data
+  }' |
+oc create -f -
+```
+
+Monitor the deployments for Orchestrate and ensure that all of the relevant pods are able to start properly
+```bash
+oc get deploy -n ${PROJECT_CPD_INST_OPERANDS} | grep wo-
+```
+
+---
+
 #### Post upgrade task 1 for Watsonx Orchestrate
 
 Login to Red Hat OpenShift cluster
