@@ -1330,6 +1330,22 @@ Check for any errors in the operator pod yaml directly
 oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258 -n ups-wx-operators
 ```
 
+Monitor the watsonxai relevant custom resources
+```bash
+watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,wmlbase,ws,NotebookRuntime,watsonxai'
+```
+
+Monitor wml reconciliation
+```bash
+oc get wmlbase wml-cr -n ups-wx-operands -o custom-columns="STATUS:.status.wmlStatus,PROGRESS:.status.progress,MESSAGE:.status.progressMessage,RUNNING:.status.conditions[?(@.type==\"Running\")].status,FAILURE:.status.conditions[?(@.type==\"Failure\")].status"
+
+```
+
+Monitor wx_ai reconciliation
+```bash
+oc get watsonxai watsonxai-cr -n ups-wx-operands -o custom-columns="STATUS:.status.watsonxaiStatus,PROGRESS:.status.progress,MESSAGE:.status.progressMessage"
+```
+
 ---
 
 Check the watsonxai custom resource status
