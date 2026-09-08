@@ -370,7 +370,7 @@ cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} 
 
 Apply Cognos Analytics prod license
 ```bash
-#cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cognos-analytics
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cognos-analytics
 ```
 
 Confirm the status of the applied entitlements by checking the cpd-applied-entitlements configmap
