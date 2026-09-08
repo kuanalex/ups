@@ -79,13 +79,6 @@ export OADP_PROJECT=ibm-backup-restore
 export PROJECT_INST_BR_SVC=${PROJECT_CPD_INST_OPERATORS}-br-svc
 export BR_OPERATOR_JOB_SA=bros-job-sa
 export BR_OPERATOR_SA=bros-sa
-# export NODE_AGENT_POD_CPU_LIMIT=500m
-# export KOPIA_POD_CPU_LIMIT=1
-```
-
-Add the br_orchestration component after the cpd_platform component, for example
-```bash
-export COMPONENTS=ibm-licensing,ibm_events_operator,cpd_platform,br_orchestration,watsonx_orchestrate,watsonx_ai,watsonx_governance,watson_speech,voice_gateway,db2oltp,cognos_analytics
 ```
 
 Source the environment variables
@@ -404,7 +397,7 @@ Confirm the value of 'spec/non_olm' in the Ibmcpd ibmcpd-cr custom resource yaml
 echo "Ibmcpd (ibmcpd-cr): non_olm = $(oc get ibmcpd ibmcpd-cr -o jsonpath='{.spec.non_olm}')"
 ```
 
-Where the output we want to see is non_olm = true (helm based deployment)
+The output we expect to see is 'non_olm = true' for a helm based deployment
 ```bash
 Ibmcpd (ibmcpd-cr): non_olm = true
 ```
