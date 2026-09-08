@@ -1376,11 +1376,11 @@ DROP TABLE IF EXISTS migration_log;
 
 #### Post upgrade task 2 for Watsonx Orchestrate
 
-After completing this migration, follow the steps for 'Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0'
+After completing this migration, follow the steps for 'Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 1'
 
 **Reference**: [Apply hot fix for IBM watsonx Orchestrate](https://www.ibm.com/support/pages/node/7247038)
 
-**Reference**: [Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 0](https://www.ibm.com/support/pages/node/7284300)
+**Reference**: [Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 1](https://www.ibm.com/support/pages/node/7286341)
 
 Set the operator and operand namespaces
 ```bash
