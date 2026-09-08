@@ -838,9 +838,9 @@ oc get deploy -n ${PROJECT_CPD_INST_OPERANDS} | grep wo-
 
 ---
 
-#### Potential Issue - wo-tenant-migration-job is skipped due to timing issue
+#### Potential Issue - wo-tenant-migration-job is skipped requiring manual job creation and execution
 
-The wo-tenant-migration-job is supposed to run during the Orchestrate upgrade, but was skipped during the non-prod upgrade (best guess 
+The wo-tenant-migration-job is supposed to run during the Orchestrate upgrade, but was skipped during the non-prod upgrade
 
 In this scenario, the wo-tenant-migration-job will need to be run manually
 
