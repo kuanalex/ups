@@ -850,7 +850,11 @@ vi wo-tenant-migration-job.yaml
 ```
 
 Copy the contents into the job yaml file
-```bash
+
+<details>
+<summary>wo-tenant-migration-job.yaml</summary>
+
+```yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -1273,6 +1277,8 @@ spec:
   ttlSecondsAfterFinished: 86400
 ```
 
+</details>
+
 Apply the job yaml
 ```bash
 oc apply -f wo-tenant-migration-job.yaml
@@ -1390,6 +1396,10 @@ vi 5.4.2-Hotfix1.sh
 ```
 
 With the following contents
+
+<details>
+<summary>5.4.2-Hotfix1.sh</summary>
+
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
@@ -1891,6 +1901,8 @@ log "   to be applied and restarted."
 log "------------------------------------------------------------------"
 ```
 
+</details>
+
 Make the script executable
 ```bash
 chmod 775 5.4.2-Hotfix1.sh
@@ -1917,6 +1929,10 @@ vi 5.4.2-Hotfix1-verify.sh
 ```
 
 With the following content
+
+<details>
+<summary>5.4.2-Hotfix1-verify.sh</summary>
+
 ```bash
 #!/usr/bin/env bash
 set -eo pipefail
@@ -2336,6 +2352,8 @@ while true; do
 done
 ```
 
+</details>
+
 Make the script executable
 ```bash
 chmod 775 5.4.2-Hotfix1-verify.sh
@@ -2373,6 +2391,10 @@ vi wxo-hotfix-db-schema-job-unblock.sh
 ```
 
 With the following contents
+
+<details>
+<summary>wxo-hotfix-db-schema-job-unblock.sh</summary>
+
 ```bash
 #!/usr/bin/env bash
 # =============================================================================
@@ -2757,6 +2779,8 @@ info "Expected final CR state: RECONCILE_PROGRESS=100%  READY=True"
 info "Monitor with:"
 echo "  oc get watsonxorchestrate $CR -n $NS"
 ```
+
+</details>
 
 Make the script executable
 ```bash
