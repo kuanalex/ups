@@ -3581,6 +3581,18 @@ WxO development team to provide the new procedure to enable WxO Observability
 
 **Reference**: [Enable WxO Observability](https://github.com/kuanalex/ups/blob/main/WxO_Observability_PROD_Runbook.md)
 
+Check the Orchestrate custom resource yaml for this particular configuration
+```bash
+oc get wo wo -o yaml
+```
+
+Expected output
+```bash
+spec:
+    agentops:
+      enabled: true
+```
+
 ---
 
 #### Potential Issue - Enabling Watson Speech services to process API requests on multiple clusters
