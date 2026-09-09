@@ -3573,6 +3573,8 @@ oc patch cronjob wo-chat-with-docs-expiry-cronjob \
 ]'
 ```
 
+---
+
 #### Potential Issue - Enable WxO Observability
 
 WxO development team to provide the new procedure to enable WxO Observability
@@ -3591,7 +3593,7 @@ To enable an active-active multi-cluster deployment topology, you must edit the 
 - Enable active-active mode
 - Specify the Version 4 universally unique identifier (UUID) that you want to use
 
-Set your ACTIVE_ACTIVE_SEED environment variable to the UUID
+Set your ACTIVE_ACTIVE_SEED environment variable to the UUID (use 'f07e930b-a471-4990-b53b-47a5ed7dcc18' for both PROD-East and PROD-Central)
 ```bash
 export ACTIVE_ACTIVE_SEED=f07e930b-a471-4990-b53b-47a5ed7dcc18
 ```
