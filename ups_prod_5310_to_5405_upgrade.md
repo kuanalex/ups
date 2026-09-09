@@ -3581,19 +3581,40 @@ WxO development team to provide the new procedure to enable WxO Observability
 
 ---
 
-#### Potential Issue - Fix platform-auth-service pod in ContainerStatusUnknown
-
-Follow the procedure in the following known issue document to resolve platform-auth-service pod in ContainerStatusUnknown issue
-
-**Reference**: [Enabling the debug trace for the platform-auth-service cause pod in ContainerStatusUnknown state and repeatedly get evicted](https://www.ibm.com/mysupport/s/defect/aCIgJ000000C9qjWAC/dt467023?language=en_US)
-
----
-
 #### Potential Issue - Enabling Watson Speech services to process API requests on multiple clusters
+
+**Reference**: [Enabling Watson Speech services to process API requests on multiple clusters](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pis-enabling-watson-speech-services-process-api-requests-multiple-clusters)
 
 You can configure Watson Speech services for an active-active multi-cluster deployment, enabling API requests to be processed across multiple clusters
 
-**Reference**: [Enabling Watson Speech services to process API requests on multiple clusters](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=pis-enabling-watson-speech-services-process-api-requests-multiple-clusters)
+To enable an active-active multi-cluster deployment topology, you must edit the Watson Speech services custom resource to
+- Enable active-active mode
+- Specify the Version 4 universally unique identifier (UUID) that you want to use
+
+Set your ACTIVE_ACTIVE_SEED environment variable to the UUID
+```bash
+export ACTIVE_ACTIVE_SEED=f07e930b-a471-4990-b53b-47a5ed7dcc18
+```
+
+Login to the cluster
+```bash
+${OC_LOGIN}
+```
+
+Set the INSTANCE to the name of the Watson Speech services custom resource:
+```bash
+export INSTANCE=$(oc get watsonspeech -n=${PROJECT_CPD_INST_OPERANDS} | grep -v NAME | awk '{print $1}')
+```
+
+Patch the custom resource to enable active-active mode and specify the UUID:
+```bash
+oc patch WatsonSpeech ${INSTANCE} \
+ --namespace=${PROJECT_CPD_INST_OPERANDS} \
+ --type=merge \
+ -p "{\"spec\":{\"global\":{\"activeActiveSeed\":\"${ACTIVE_ACTIVE_SEED}\",\"activeActiveEnabled\":true}}}"
+```
+
+Wait for the Watson Speech customization pods to restart and the custom resource to reach Completed state
 
 ---
 
