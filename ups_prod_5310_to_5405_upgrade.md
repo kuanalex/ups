@@ -508,11 +508,6 @@ Remove the image_digests section from watsonxaiifm-cr
 oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
-Remove the image.digestOverrides from the wo custom resource
-```bash
-oc patch wo wo -n ups-wx-operands --type=merge -p='{"spec": {"image": {"digestOverrides": null}}}'
-```
-
 If applicable, remove the 'wo.watsonx.ibm.com/hands-off' annotation from Orchestrate rediscp custom resource
 ```bash
 oc get rediscp wo-watson-orchestrate-rediscp -oyaml
@@ -3082,7 +3077,13 @@ Before starting Cognos upgrade, ensure that the 'spec.enableInstanaMetricCollect
 oc get CAService ca-addon-cr  -o yaml | grep -A 10 enableInstanaMetricCollection
 ```
 
-**Note**: If 'enableInstanaMetricCollection' is set to 'true' this can prevent the Cognos Analytics upgrade from completing, awaiting confirmation from Development if we can set 'enableInstanaMetricCollection' to 'false' prior to upgrade of Cognos Analytics
+**Note**: If 'enableInstanaMetricCollection' is set to 'true' this can prevent the Cognos Analytics upgrade from completing, received confirmation from development that we can set 'enableInstanaMetricCollection' to 'false' prior to upgrade of Cognos Analytics
+```bash
+oc patch caservices ca-addon-cr \
+  -n ${PROJECT_CPD_INST_OPERANDS} \
+  --type=merge \
+  -p '{"spec":{"enableInstanaMetricCollection": false}}'
+```
 
 Upgrade Cognos Analytics
 ```bash
@@ -3115,7 +3116,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 During the UPS non-prod upgrade of Cognos Analytics, we encountered an issue with the ibm-cognos-addon-sp-deployment in CrashLoopBackOff
 
-The permanent fix has been delivered to 31.0.0 branch which is targeted for CPD 6.0.0 release, meanwhile here is the documentation for the workaround
+The permanent fix has been delivered to 31.0.0 branch which is targeted for CPD 6.0.0 release, meanwhile here is the documentation for the workaround, if 'enableInstanaMetricCollection' was not set to 'false' prior to the upgrade
 
 Fix the CrashLoopBackOff by first patching the caservice custom resource
 ```bash
