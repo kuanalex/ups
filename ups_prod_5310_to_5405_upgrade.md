@@ -251,7 +251,7 @@ cpd-cli manage case-download --components=${COMPONENTS} --release=${VERSION} --p
 
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
-oc apply -f cluster_scoped_resources.yaml --server-side --force-conflicts
+oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml --force-conflicts --server-side
 ```
 
 ---
@@ -310,7 +310,7 @@ cpd-cli manage deploy-events-operator --release=${VERSION} --cluster_resources=t
 
 Run the 'oc apply -f' command returned in the terminal, for example
 ```bash
-oc apply -f /.../cpd-cli-workspace/olm-utils-workspace/work/cluster_scoped_resources.yaml
+oc apply -f /root/cpd-cli-workspace/olm-utils-workspace/work/ibm-events-operator-crds.yaml --server-side --force-conflicts
 ```
 
 Upgrade the Red Hat OpenShift Serverless Knative Eventing software
