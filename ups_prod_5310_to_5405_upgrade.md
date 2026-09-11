@@ -383,7 +383,7 @@ data:
 
 ## Upgrade IBM Software Hub Platform and Services
 
-#### Upgrade CPD platform
+#### Upgrade IBM Software Hub
 
 **Reference**: [Upgrading IBM Software Hub](https://www.ibm.com/docs/en/software-hub/5.4.x?topic=53-upgrading-software-hub)
 
@@ -3552,6 +3552,45 @@ oc patch cronjob wo-chat-with-docs-expiry-cronjob \
     }
   }
 ]'
+```
+
+---
+
+#### Potential Issue - Watson Assistant Overwrites IFM-cr Values
+
+Post upgrade of Orchestrate in non-prod, Assistant is intermittently overwriting IFM-cr values
+
+To address this, 3 modifications need to be made within the wa wo-wa custom resource
+
+Edit the wa wo-wa custom resource
+```bash
+oc edit wa wo-wa -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+For the first edit, add the 'hands-off' label in the metadata > annotations section 
+```bash
+wo.watsonx.ibm.com/hands-off: "true"
+```
+
+For the second edit, set 'watsonx_enabled' to 'false'
+```bash
+watsonx_enabled: false ## Modify to false
+```
+
+For the last edit, look for the 'enabled_components' section and set 'ifm' to 'false'
+```bash
+  enabled_components:
+    store:
+      extra_vars:
+        store:
+          ASSISTANT_MAX_PAGE_LIMIT: 100000
+          MAX_AGENTS: 4000
+          MAX_HANDLERS: 20000
+          MAX_NEW_IA_ASSISTANTS: 1000000
+          MAX_NEW_IA_SKILLS: 8000000
+          MAX_STEPS: 150000
+          MAX_VARIABLES: 10000
+      ifm: false ## Modify to false
 ```
 
 ---
