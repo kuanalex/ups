@@ -1881,7 +1881,7 @@ chmod 775 5.4.2-Hotfix1-verify.sh
 
 Run the script
 ```bash
-5.4.2-Hotfix1-verify.sh
+./5.4.2-Hotfix1-verify.sh
 ```
 
 Verify CR status and label
