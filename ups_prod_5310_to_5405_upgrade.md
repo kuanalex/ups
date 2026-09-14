@@ -990,7 +990,7 @@ log "✅ Version check passed (8.0.2)"
 log ""
 
 # Hardcode images here when you do not want to pass them as script arguments.
-BOOTSTRAP_OPERATOR_IMAGE="icr.io/cpopen/ibm-watsonx-orchestrate-operator@sha256:10e41967b0e6e985169d42d94ab35710bb9cef0e83a13a040b4b5ee838c6ed3c"
+BOOTSTRAP_OPERATOR_IMAGE="icr.io/cpopen/ibm-watsonx-orchestrate-operator@sha256:48d636029b579f41bc1baf4e5400bc585a1201a1a0f055cb1d6212b7cb75d2b9"
 COMPONENT_OPERATOR_IMAGE="icr.io/cpopen/ibm-wxo-component-operator@sha256:2516e5b84db6cbca9357a268d454361fb6dac880d44c6bf8e2e6a634af1e6ade"
 
 if [[ $# -gt 1 ]]; then
