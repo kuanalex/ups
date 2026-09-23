@@ -3178,22 +3178,30 @@ Run the script
 
 ---
 
-Make sure to add the resource configurations from rediscp instance in the 5.4.2 wo custom resource within the spec section
+Patch the resource configurations from rediscp instance in the 5.4.2 wo custom resource
 ```bash
-spec:
-    redis_resources:
-      limits:
-        cpu: "2"
-        ephemeral-storage: 1Gi
-        memory: 50Gi
-      requests:
-        cpu: "1"
-        ephemeral-storage: 10Mi
-        memory: 40Gi
-    persistentVolume:
-      accessModes:
-      - ReadWriteOnce
-      size: 150Gi
+oc patch watsonxorchestrate wo \
+  -n ups-wx-operands \
+  --type=merge \
+  -p '{
+    "spec": {
+      "redis": {
+        "storageSize": "150Gi",
+        "redisResources": {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "1Gi",
+            "memory": "50Gi"
+          },
+          "requests": {
+            "cpu": "1",
+            "ephemeral-storage": "10Mi",
+            "memory": "40Gi"
+          }
+        }
+      }
+    }
+  }'
 ```
 
 ---
