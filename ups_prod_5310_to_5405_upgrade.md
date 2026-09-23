@@ -3309,6 +3309,182 @@ spec:
     - configmap/speech-cr-tts-runtime
 ```
 
+Ensure the Watson Speech CR is matching between the Prod-East and Prod-Central clusters
+```bash
+spec:
+  sttCustomization:
+    resources:
+      replicas: 3
+  ttsCustomization:
+    resources:
+      replicas: 3
+  license:
+    accept: true
+  global:
+    datastores:
+      gateway:
+        stt:
+          autoscaling:
+            cpuUtilization: 75
+            enabled: true
+            maxReplicas: 40
+          size: large
+        tts:
+          autoscaling:
+            cpuUtilization: 75
+            enabled: true
+            maxReplicas: 40
+          size: large
+    doNotManage:
+      - configmap/speech-cr-stt-runtime
+      - configmap/speech-cr-tts-runtime
+    image:
+      pullSecret: ibm-entitlement-key
+    imagePullPrefix: us-docker.pkg.dev/gcp-eda-upsaip-prod/uaip-p-image-registry
+    sttModels:
+      enUsShortFormNarrowbandModel:
+        enabled: false
+      deDe:
+        enabled: true
+      itItTelephony:
+        enabled: true
+      esPe:
+        enabled: true
+      enGb:
+        enabled: true
+      frFrTelephonyLSM:
+        enabled: true
+      enUs:
+        enabled: true
+      frCa:
+        enabled: true
+      enUsTelephony:
+        enabled: true
+      enUsMultimedia:
+        enabled: false
+      enUsNarrowbandModel:
+        enabled: false
+      esLaTelephony:
+        enabled: true
+      deDeTelephony:
+        enabled: true
+      esCl:
+        enabled: true
+      nlBeTelephony:
+        enabled: true
+      frFr:
+        enabled: true
+      enUsBroadbandModel:
+        enabled: false
+      esMx:
+        enabled: true
+      esCo:
+        enabled: true
+      esEsTelephony:
+        enabled: true
+      esEs:
+        enabled: true
+      nlNlTelephony:
+        enabled: true
+      esAR:
+        enabled: true
+    ttsVoices:
+      esESLauraV3Voice:
+        enabled: true
+      frCALouiseV3Voice:
+        enabled: true
+      enUSLisaV3Voice:
+        enabled: true
+      enAUJackExpressive:
+        enabled: true
+      enUSHenryV3Voice:
+        enabled: true
+      deDEErikaV3Voice:
+        enabled: true
+      enUSMichaelExpressive:
+        enabled: true
+      enGBKateV3Voice:
+        enabled: true
+      enGBGeorgeExpressive:
+        enabled: true
+      enUSEmmaExpressive:
+        enabled: true
+      enUSAllisonExpressive:
+        enabled: true
+      enUSOliviaV3Voice:
+        enabled: true
+      enUSEmilyV3Voice:
+        enabled: true
+      esESEnriqueV3Voice:
+        enabled: true
+      nlNLMerelV3Voice:
+        enabled: true
+      enUSAllisonV3Voice:
+        enabled: true
+      enUSMichaelV3Voice:
+        enabled: true
+      itITFrancescaV3Voice:
+        enabled: true
+      esLASofiaV3Voice:
+        enabled: true
+      frFRNicolasV3Voice:
+        enabled: true
+      enUSLisaExpressive:
+        enabled: true
+      enUSKevinV3Voice:
+        enabled: true
+      enAUHeidiExpressive:
+        enabled: true
+      esUSSofiaV3Voice:
+        enabled: true
+    voiceType: enhancedNeuralVoices
+  sttRuntime:
+    chuck:
+      maxUnavailable: 3
+    resources:
+      limits:
+        cpu: 10
+        ephemeralStorage: 50Gi
+        memory: 60Gi
+      replicas: 79
+      requests:
+        cpu: 10
+        ephemeralStorage: 50Gi
+        memory: 60Gi
+    skipAudioAndResultLogging: true
+  ttsRuntime:
+    chuck:
+      maxUnavailable: 3
+    resources:
+      limits:
+        cpu: 12
+        ephemeralStorage: 10Gi
+        memory: 25Gi
+      replicas: 46
+      requests:
+        cpu: 12
+        ephemeralStorage: 10Gi
+        memory: 25Gi
+    skipAudioAndResultLogging: true
+  blockStorageClass: ssd-csi
+  scaleConfig:
+    stt:
+      size: large
+    tts:
+      size: large
+  quiesce: false
+  version: 5.4.2
+  tags:
+    sttAsync: false
+    sttCustomization: true
+    sttRuntime: true
+    ttsCustomization: true
+    ttsRuntime: true
+  fileStorageClass: gcnv-extreme-sc
+  enableNetworkpolicies: true
+  non_olm: true
+```
+
 ---
 
 #### Upgrade Voice Gateway
