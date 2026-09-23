@@ -4048,6 +4048,45 @@ fi
 
 ## Post Upgrade Validation
 
+---
+
+#### Potential Issue - RSI Patching automatically appends rsi to name of patch
+
+When applying and deleting rsi patches, --patch_name should not include 'rsi-' at the beginning of the patch name
+
+Incorrect syntax example
+```bash
+cpd-cli manage create-rsi-patch \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --patch_name=rsi-wo-channel-integrations-api-proxy-dns \
+  --state=inactive
+```
+
+Correct syntax example
+```bash
+cpd-cli manage create-rsi-patch \
+  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+  --patch_name=wo-channel-integrations-api-proxy-dns \
+  --state=inactive
+```
+
+---
+
+#### Potential Issue - Analytics UI Chat Errors
+
+When you send a chat it returns something like [object]
+
+The issue was caused by a missing environment column in certain database tables
+
+Fix process
+- Check whether the environment column exists in those tables (using a table describe/schema query)
+- If the column is missing, run the provided alter table statements to add it
+- Recheck the tables to confirm the column was successfully added
+
+**Note**: Confirm the exact verification queries and alter table commands with Daniel and add them here... 
+
+---
+
 #### Potential Issue - Chat with docs cleanup job fails due to insufficient memory after upgrade
 
 After upgrading 5.4.0 Patch 5, the wo-chat-with-docs-expiry-cronjob pod fails with an OOMKilled error
