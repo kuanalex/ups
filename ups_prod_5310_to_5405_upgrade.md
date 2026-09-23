@@ -3935,17 +3935,17 @@ oc patch dataprotectionapplication ${DPA_NAME} \
         "name": "cpfs-oadp-plugin" 
       },
       { 
-        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/cpdbr-velero-plugin:${VERSION}",
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/cpdbr-velero-plugin":'"${VERSION}"'",
         "name": "cpdbr-velero-plugin" 
       },
       { 
-        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/swhub-velero-plugin:${VERSION}", 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/swhub-velero-plugin:'"${VERSION}"'", 
         "name": "swhub-velero-plugin" 
       },
       { 
-        "image": "${PRIVATE_REGISTRY_LOCATION}/db2u/db2u-velero-plugin:${VERSION}",
+        "image": "${PRIVATE_REGISTRY_LOCATION}/db2u/db2u-velero-plugin:'"${VERSION}"'",
         "name": "db2u-velero-plugin" 
-      } 
+      }
     ]
   }
 ]'
