@@ -874,6 +874,104 @@ oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral \
 
 ---
 
+#### Potential Issue - Langfuse Web Pod in CrashLoopBackOff 
+
+This appears to be a [Failure for the ClickHouse / Langfuse stack deployed on Watson Orchestrate CPD Onprem clusters](https://github.ibm.com/WatsonOrchestrate/Release-Planning/wiki/ClickHouse-Runbook-%E2%80%90-Onprem)
+
+
+Confirm the crash reason from pod logs
+```bash
+oc logs -n cpd-instance-1 -l app.kubernetes.io/component=langfuse-web -c wo-langfuse-web --tail=20
+```
+
+Pod logs show the following error messages
+```bash
+error: Dirty database version <N>. Fix and force version.
+Applying clickhouse migrations failed. Common causes:
+  1. The database is unavailable or unreachable.
+  2. CLICKHOUSE_PASSWORD contains special characters that are not URL-encoded.
+Exiting...
+```
+
+Check the migration table on both shards
+```bash
+oc exec -n cpd-instance-1 chi-application-default-shard-1-0-0 -c clickhouse -- \
+ clickhouse-client --query "SELECT * FROM default.schema_migrations ORDER BY version"
+ 
+oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
+ clickhouse-client --query "SELECT * FROM default.schema_migrations ORDER BY version"
+```
+
+Output columns are version | dirty | sequence
+
+Any row with dirty = 1 is the cause
+
+**Resolution-CRITICAL**: Scale down wo-langfuse-web before clearing dirty rows. While the pod is crashlooping, each restart attempt writes new dirty rows faster than you can clean them, making the fix ineffective
+
+Step 1 — Scale down wo-langfuse-web and wo-operator to stop new dirty rows being written
+```bash
+oc scale deployment -n cpd-instance-1 wo-langfuse-web --replicas=0
+oc scale deployment -n cpd-operators wo-operator   --replicas=0
+```
+
+Confirm pods are gone
+```bash
+oc get pods -n cpd-instance-1 -l app.kubernetes.io/component=langfuse-web
+oc get pods -n cpd-operators -l app.kubernetes.io/component=watson-orchestrate 
+```
+
+Step 2 — Clear all dirty rows on shard 1-0-0
+```bash
+oc exec -n cpd-instance-1 chi-application-default-shard-1-0-0 -c clickhouse -- \
+ clickhouse-client --query \
+ "ALTER TABLE default.schema_migrations UPDATE dirty = 0 WHERE dirty = 1"
+```
+
+Step 3 — Clear all dirty rows on shard 1-1-0
+```bash
+oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
+ clickhouse-client --query \
+ "ALTER TABLE default.schema_migrations UPDATE dirty = 0 WHERE dirty = 1"
+```
+
+Step 4 — Verify both shards are clean (should return 0)
+```bash
+oc exec -n cpd-instance-1 chi-application-default-shard-1-0-0 -c clickhouse -- \
+ clickhouse-client --query \
+ "SELECT count() FROM default.schema_migrations WHERE dirty = 1"
+
+oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
+ clickhouse-client --query \
+ "SELECT count() FROM default.schema_migrations WHERE dirty = 1"
+```
+
+**Note**: The table from both oc exec commands needs to show all zeros
+
+Step 5 — Scale wo-langfuse-web back up
+```bash
+oc scale deployment -n cpd-instance-1 wo-langfuse-web --replicas=1
+```
+
+Step 6 — Watch the pod recover
+```bash
+oc get pods -n cpd-instance-1 -l app.kubernetes.io/component=langfuse-web -w
+oc get pods -n cpd-operators -l app.kubernetes.io/component=watson-orchestrate -w
+```
+
+Expected outcome: pod reaches 2/2 Running with 0 restarts within ~60 seconds
+
+Step 7 — Once the langfuse pods back, Scale up wo-operator back up and ensure its running fine
+```bash
+oc scale deployment -n cpd-operators wo-operator  --replicas=1 
+```
+
+**Notes**:
+- The HPA will automatically restore the desired replica count after scale-up.
+- This issue typically appears after a failed Langfuse upgrade/rollout where the new pod started a migration but was terminated mid-way.
+- Both shards must be cleaned. ClickHouse uses ReplicatedMergeTree so the schema_migrations table exists independently on each shard replica.
+
+---
+
 #### Potential Issue - Watson Orchestrate Postgres Instance Stuck
 
 Check the status of the wo-watson-orchestrate-postgresedb cluster
@@ -956,7 +1054,7 @@ oc patch deployment ibm-documentprocessing-operator \
 
 #### Potential Issue - Orchestrate custom resource stuck at 97% - Deploying Milvus
 
-During a test upgrade, Orchestrate got stuck during the Milvus deployment
+During Orchestrate upgrade, Orchestrate is stuck during the Milvus deployment
 ```bash
 oc get wo
 NAME   VERSION   PATCH_VERSION     READY        DEPLOYING_COMPONENT   DEPLOYED   VERIFIED   INSTALLMODE         QUIESCE        RECONCILE_PROGRESS   AGE
@@ -1023,7 +1121,7 @@ metadata:
     icpdsupport/addOnId: watsonx_data
     icpdsupport/entitlement: watsonx-orchestrate
   annotations:
-    cloudpakId: "6341c0866cd24bb298037e1476bd4e56"
+    cloudpakId: "<---obtain this value from watsonxaiifm-configmap--->" # for example ""5e4c7dd451f14946bc298e18851f3746""
     cloudpakName: "IBM watsonx Orchestrate Cartridge"
     productID: "0be53fb8946d4b82a770f82d60f05657"
     productMetric: "FREE"
@@ -1033,12 +1131,12 @@ spec:
   condition:
     metadata:
       annotations:
-        cloudpakInstanceId: "3edfc5f2-f5c1-4132-95bc-7aad0a7e67f6"
+        cloudpakInstanceId:  "<---obtain this value from watsonxaiifm-configmap--->" # for example "3edfc5f2-f5c1-4132-95bc-7aad0a7e67f6"
       labels:
         icpdsupport/addOnId: watsonx_data
   scope: cluster
   set:
-    cloudpakId: "6341c0866cd24bb298037e1476bd4e56"
+    cloudpakId: "<---obtain this value from watsonxaiifm-configmap--->" # for example ""5e4c7dd451f14946bc298e18851f3746""
     cloudpakName: "IBM watsonx Orchestrate Cartridge"
     productID: "0be53fb8946d4b82a770f82d60f05657"
     productName: "IBM watsonx Orchestrate"
