@@ -845,6 +845,35 @@ Monitor watsonx_orchestrate upgrade
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && oc get ccs,watsonxaiifm,wa,documentprocessing,wo'
 ```
 
+---
+
+#### Potential Issue - Watson Assistant upgrade blocked during Watsonx Orchestrate upgrade 
+
+The ephemeralDeployment data type was updated from Boolean to String, and this required an edit on the wo-wa-data-governor-opensearch-ephemeral temporarypatch in this section
+```bash
+spec:
+  apiVersion: assistant.watson.ibm.com/v1
+  kind: WatsonAssistant
+  name: wo-wa
+  patch:
+    data-governor:
+      datagovernoroverride:
+        spec:
+          dependencies:
+            opensearch:
+------------> ephemeralDeployment: true
+```
+
+Update the ephemeralDeployment value to a string
+```bash
+oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral \
+  -n ups-wx-operands \
+  --type=merge \
+  -p '{"spec":{"patch":{"data-governor":{"datagovernoroverride":{"spec":{"dependencies":{"opensearch":{"ephemeralDeployment":"true"}}}}}}}}'
+```
+
+---
+
 #### Potential Issue - Watson Orchestrate Postgres Instance Stuck
 
 Check the status of the wo-watson-orchestrate-postgresedb cluster
