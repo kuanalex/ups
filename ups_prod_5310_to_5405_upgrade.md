@@ -485,6 +485,13 @@ Export the XAI_COMPONENT_TYPE variable
 XAI_COMPONENT_TYPE=watsonx_ai
 ```
 
+**IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests from watsonxaiifm-cr
+
+Remove the image_digests section from watsonxaiifm-cr
+```bash
+oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
+```
+
 Upgrade watsonx_ai
 ```bash
 cpd-cli manage install-components \
@@ -585,13 +592,6 @@ non_olm:
       ootbModels:
         - ibm-slate-30m-english-rtrvr
         - gpt-oss-120b
-```
-
-**IMPORTANT**: Before proceeding with Orchestrate upgrade, remove the following image_digests from watsonxaiifm-cr
-
-Remove the image_digests section from watsonxaiifm-cr
-```bash
-oc patch watsonxaiifm watsonxaiifm-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
 If applicable, remove the 'wo.watsonx.ibm.com/hands-off' annotation from Orchestrate rediscp custom resource
