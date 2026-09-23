@@ -1204,6 +1204,13 @@ else
 fi
 
 # -----------------------------
+# wo-watson-orchestrate-trm-secret fix
+# -----------------------------
+if oc get secret "wo-watson-orchestrate-trm-secret" -n "${PROJECT_CPD_INST_OPERANDS}" >/dev/null 2>&1; then
+    oc delete secret "wo-watson-orchestrate-trm-secret"
+fi
+
+# -----------------------------
 # watson-gateway fix
 # -----------------------------
 GW_SHA="sha256:ed87dfc283fd1bf29a078e5c91b20e86abd1fcd73dca89629a34d9ba7d826441"
@@ -1370,7 +1377,7 @@ log "UAB cleanup completed."
 # ── Digital Employee ────────────────────────────────────────────────────────────
 log "Cleaning Digital Employee..."
 if oc api-resources 2>/dev/null | grep -q "^digitalemployees"; then
-  oc delete digitalemployees.wo.watsonx.ibm.com -n "${PROJECT_CPD_INST_OPERANDS}" --ignore-not-found
+  oc delete digitalemployees.wo.watsonx.ibm.com de -n "${PROJECT_CPD_INST_OPERANDS}" --ignore-not-found
 fi
 
 scale_down digital-employee-operator-controller-manager "${PROJECT_CPD_INST_OPERATORS}"
