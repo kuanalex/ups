@@ -802,29 +802,6 @@ metadata:
 oc scale deployment ibm-cpd-watsonx-ai-ifm-operator -n ${PROJECT_CPD_INST_OPERATORS} --replicas=0
 ```
 
-Copy the contents of the custom ca secret to the wo custom secret
-```bash
-NS=ups-wx-operands
-SOURCE_SECRET=cpd-custom-ca-certs
-TARGET_SECRET=wo-custom-certs
-
-oc get secret "$SOURCE_SECRET" -n "$NS" -o json |
-jq \
-  --arg name "$TARGET_SECRET" \
-  --arg namespace "$NS" \
-  '{
-    apiVersion: "v1",
-    kind: "Secret",
-    metadata: {
-      name: $name,
-      namespace: $namespace
-    },
-    type: .type,
-    data: .data
-  }' |
-oc create -f -
-```
-
 Upgrade watsonx_orchestrate
 ```bash
 cpd-cli manage install-components \
