@@ -300,7 +300,7 @@ ${CPDM_OC_LOGIN}
 
 Download case packages for ibm_events_operator
 ```bash
-cpd-cli manage case-download --release=${VERSION} --patch_id=${PATCH_ID} --components=ibm_events_operator --from_oci=true
+cpd-cli manage case-download --release=${VERSION} --patch_id=${PATCH_ID} --components=ibm_events_operator
 ```
 
 Generate cluster-scoped resource definitions for the IBM Events Operator
@@ -566,6 +566,20 @@ Check the watsonxai custom resource status
 ```bash
 cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=watsonx_ai
 ```
+
+---
+
+#### Potential Issue - hap-and-pii-detector-install-job in pending state
+
+Wx_ai reconcile will not complete until this job runs to completion, but this job is blocked by WA as it intermittently attempts to overwrite the IFM CR model values.
+
+Granite/BYOM configmap needs to be cleaned up using this expected format
+
+Modify ibm-granite-3-2-8b-instruct-byom-v2 configmap to the correct model
+
+
+
+
 
 ---
 
