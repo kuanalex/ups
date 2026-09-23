@@ -576,6 +576,8 @@ Wx_ai reconcile will not complete until this job runs to completion, but this jo
 Granite/BYOM configmap needs to be cleaned up using this expected format
 
 Modify ibm-granite-3-2-8b-instruct-byom-v2 configmap to the correct model
+
+oc edit cm ibm-granite-3-2-8b-instruct-byom-v2 -n ${PROJECT_CPD_INST_OPERANDS}
 ```bash
 apiVersion: v1
 data:
