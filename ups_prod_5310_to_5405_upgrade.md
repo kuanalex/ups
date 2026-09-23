@@ -3261,6 +3261,20 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --co
 
 #### Upgrade Watson Speech
 
+After Watson Speech was upgraded to 5.3.1 a hot fix was applied and applied various image digests
+
+Remove Watson Speech image digests prior to upgrading
+```bash
+oc patch watsonspeech speech-cr -n ups-wx-operands --type=json -p='[
+  {"op": "remove", "path": "/spec/global/sttModels/deDe/digest"},
+  {"op": "remove", "path": "/spec/global/sttModels/frFrTelephonyLSM/digest"},
+  {"op": "remove", "path": "/spec/global/sttModels/nlNlTelephony/digest"},
+  {"op": "remove", "path": "/spec/images/am_patcher_chuck/digest"},
+  {"op": "remove", "path": "/spec/images/stt_runtime_chuck/digest"},
+  {"op": "remove", "path": "/spec/images/tts_runtime_chuck/digest"}
+]'
+```
+
 Upgrade Watson Speech
 ```bash
 cpd-cli manage install-components \
