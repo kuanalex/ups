@@ -1001,6 +1001,24 @@ ALTER TABLE scores ON CLUSTER default ADD COLUMN environment LowCardinality(Stri
 
 ---
 
+#### Potential Issue - Check Configuration Consistency In Orchestrate Postgres Clients
+
+Check the following pods for configuration consistency > api-server-runs, archer, conversation-controller, etc.
+
+RSH into any/all of these pods and check the configuration for the following fields
+```bash
+env | grep -E 'CHECKPOINT_MIN_POOL_SIZE|CHECKPOINT_MAX_LIFETIME|POSTGRES_POOL_RECYCLE'
+```
+
+Expected output should look something like this
+```bash
+CHECKPOINT_MIN_POOL_SIZE=2
+CHECKPOINT_MAX_LIFETIME=600
+POSTGRES_POOL_RECYCLE=240
+```
+
+---
+
 #### Potential Issue - Watson Orchestrate Postgres Instance Stuck
 
 Check the status of the wo-watson-orchestrate-postgresedb cluster
@@ -4325,6 +4343,40 @@ wo-opensearch-cluster-all-001   0/1   Init:ContainerStatusUnknown
 Delete the pod and monitor that it comes up cleanly
 ```bash
 oc delete po wo-opensearch-cluster-all-001 -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+---
+
+#### Potential Issue - Annie issue “Unauthorized: Invalid or missing API key”
+
+This was an issue with Assistant Builder caused by an image conflict
+
+Workaround used was to first re-apply HF1, and then restart Tools runtime manager (TRM) and executor deployment pods via deployment
+
+Re-apply HF1 and wait for it to complete
+```bash
+./5.4.2-Hotfix1.sh
+```
+
+Find and then restart the TRM and executor-deployment deployments
+```bash
+oc get deploy | grep -E 'tools-runtime-manager|executor-deployment'
+```
+
+Expected output
+```bash
+wo-tools-runtime-manager                                    3/3     3            3           14d
+executor-deployment-1789053503483368                        1/1     1            1           11d
+```
+
+Restart the deployments
+```bash
+oc rollout restart deploy wo-tools-runtime-manager && oc rollout restart deploy executor-deployment-1789053503483368 
+```
+
+Monitor the deployments
+```bash
+oc rollout status deploy wo-tools-runtime-manager && oc rollout status deploy executor-deployment-1789053503483368
 ```
 
 ---
