@@ -973,6 +973,32 @@ oc scale deployment -n cpd-operators wo-operator  --replicas=1
 - This issue typically appears after a failed Langfuse upgrade/rollout where the new pod started a migration but was terminated mid-way.
 - Both shards must be cleaned. ClickHouse uses ReplicatedMergeTree so the schema_migrations table exists independently on each shard replica.
 
+After the above steps are completed, the migration still needs to completed within a langfuse worker pod
+
+RSH into the langfuse worker pod
+```bash
+oc rsh <wo-langfuse-worker-pod>
+```
+
+Change into the following directory
+```bash
+cd /app/worker/node_modules/.pnpm/@langfuse+shared@file+packages+shared_@emnapi+core@1.9.2_@emnapi+runtime@1.9.2_@openfea_2578224d7face43a7e15705fb58c73b8/node_modules/@langfuse/shared/clickhouse/migrations/clustered
+```
+
+Execute the 0008_add_environments_column.up.sql contents
+
+Display the file contents
+```bash
+cat 0008_add_environments_column.up.sql
+```
+
+Run the commands to alter the table based on the file contents
+```bash
+ALTER TABLE traces ON CLUSTER default ADD COLUMN environment LowCardinality(String) DEFAULT 'default' AFTER project_id SETTINGS alter_sync = 2;
+ALTER TABLE observations ON CLUSTER default ADD COLUMN environment LowCardinality(String) DEFAULT 'default' AFTER project_id SETTINGS alter_sync = 2;
+ALTER TABLE scores ON CLUSTER default ADD COLUMN environment LowCardinality(String) DEFAULT 'default' AFTER project_id SETTINGS alter_sync = 2;
+```
+
 ---
 
 #### Potential Issue - Watson Orchestrate Postgres Instance Stuck
