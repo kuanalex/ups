@@ -275,6 +275,10 @@ knative-eventing-kafka-knative-eventing-kafka-controller-4   1/1     Running    
 knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running     0                4d14h
 ```
 
+---
+
+#### Potential Issue - Kafka Controller And Broker Pods Are In CrashLoopBackOff Status
+
 If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
 
 Scale down the Data Governor operator in ups-wx-operators namespace, then proceed with the following steps
@@ -368,7 +372,7 @@ cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} 
 
 Confirm the status of the applied entitlements by checking the cpd-applied-entitlements configmap
 ```bash
-oc get cm cpd-applied-entitlements -o yaml
+oc get cm cpd-applied-entitlements -o yaml -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
 For example
@@ -424,7 +428,7 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 ---
 
-#### Potential Issue - EDB operator to IBM PG operator migration fails because pods do not restart
+#### Potential Issue - EDB Operator To IBM PG Operator Migration Fails Because Pods Do Not Restart
 
 **Reference**: [EDB operator to IBM PG operator migration fails because pods do not restart](https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.19.x?topic=ui-edb-operator-pg-operator-migration-fails-because-pods-do-not-restart)
 
@@ -454,7 +458,7 @@ Symptom 3 - The common-service-db-x replica pod fails with an error message simi
 {"level":"info","ts":"2026-07-31T09:23:44.870529463Z","logger":"wait-for-get-cluster","msg":"Encountered an error while executing get cluster. Will wait and retry","logging_pod":"common-service-db-2","error":"clusters.postgresql.k8s.enterprisedb.io \"common-service-db\" is forbidden: User \"system:serviceaccount:zen:common-service-db\" cannot get resource \"clusters\" in API group \"postgresql.k8s.enterprisedb.io\" in the namespace \"zen\""}
 ```
 
-Workaround - Manually delete the failed common-service-db-x pod so that it restarts, and the pod comes back up with the correct image and permissions, repeating this step for any other failed replica 
+**Workaround**: Manually delete the failed common-service-db-x pod so that it restarts, and the pod comes back up with the correct image and permissions, repeating this step for any other failed replica 
 
 ---
 
@@ -4060,7 +4064,7 @@ fi
 
 #### Potential Issue - RSI Patching automatically appends rsi to name of patch
 
-When applying and deleting rsi patches, --patch_name should not include 'rsi-' at the beginning of the patch name
+When applying and deleting rsi patches post upgrade, --patch_name should not include 'rsi-' at the beginning of the patch name
 
 Incorrect syntax example
 ```bash
@@ -4095,7 +4099,7 @@ Fix process
 
 ---
 
-#### Potential Issue - Chat with docs cleanup job fails due to insufficient memory after upgrade
+#### Potential Issue - Chat With Docs Cleanup Job Fails Due To Insufficient Memory After Upgrade
 
 After upgrading 5.4.0 Patch 5, the wo-chat-with-docs-expiry-cronjob pod fails with an OOMKilled error
 
@@ -4130,9 +4134,9 @@ oc patch cronjob wo-chat-with-docs-expiry-cronjob \
 
 ---
 
-#### Potential Issue - Watson Assistant Overwrites IFM-cr Values
+#### Potential Issue - Watson Assistant Overwrites IFM CR Values
 
-Post upgrade of Orchestrate in non-prod, Assistant is intermittently overwriting IFM-cr values
+Post upgrade of Orchestrate in non-prod, Assistant is intermittently overwriting IFM CR values
 
 To address this, 3 modifications need to be made within the wa wo-wa custom resource
 
