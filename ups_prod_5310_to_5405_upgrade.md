@@ -3861,7 +3861,6 @@ oc get deploy voicegateway-cr -n ${PROJECT_CPD_INST_OPERANDS}
 
 ---
 
-
 ## Upgrade Service Instances
 
 After upgrading service custom resources, some services require additional instance upgrades
@@ -4377,6 +4376,30 @@ oc rollout restart deploy wo-tools-runtime-manager && oc rollout restart deploy 
 Monitor the deployments
 ```bash
 oc rollout status deploy wo-tools-runtime-manager && oc rollout status deploy executor-deployment-1789053503483368
+```
+
+---
+
+#### Potential Issue - Issues While Testing Calls Requiring Bearer Token Refresh
+
+During post validation, test calls are made to ensure voice is working as expected, and it was observed that calls were not being handled properly
+
+Validation testing and calls would redirect to agent immediately, while the logs explorer and pod logs provide more context
+
+The following script was used to address this issue in Prod-Central and will need to modified for Prod-East
+```bash
+#!/bin/bash
+# Use cr email address for CPD_USER variable
+export CPD_USER="cr@ups.com"
+export CPD_APIKEY="blahblahblah"
+# Use the following string for the CPD_ROUTE variable  'https://<cpd_host>'
+export CPD_ROUTE="https://cpd.c1.ccca.ams1907.com"
+export TOKEN=$(curl -sk -X POST "${CPD_ROUTE}/icp4d-api/v1/authorize" -H "Content-Type: application/json" -d "{\"username\":\"${CPD_USER}\",\"api_key\":\"${CPD_APIKEY}\"}" | jq -r '.token')
+export ACCESS_TOKEN=$(curl -k --location --request POST "${CPD_ROUTE}/usermgmt/v1/usermgmt/getTimedToken" --header "Authorization: Bearer ${TOKEN}" --header 'Content-Type: application/json' --header 'lifetime: 0' | jq -r '.accessToken')
+echo "Your non-expiring access token is:"
+echo ""
+echo $ACCESS_TOKEN
+echo ""
 ```
 
 ---
