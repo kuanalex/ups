@@ -426,6 +426,26 @@ Monitor platform upgrade progress (this takes 60-80 minutes)
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && echo "=== ZenService Progress ===" && oc get zenservice lite-cr -o yaml | grep progress && echo "=== Ibmcpd Progress ===" && oc get ibmcpd ibmcpd-cr -o yaml | grep progress'
 ```
 
+After platform is upgraded, add a new configuration to the product-configmap configmap
+```bash
+oc edit cm product-configmap -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+Add this field in the 'data' section
+```bash
+SERVICEABILITY_PVC_SIZE: 10Gi
+```
+
+After adding the configuration, restart the zen-watchdog pod(s)
+```bash
+oc delete po -l component=zen-watchdog
+```
+
+Monitor for the zen-watchdog to start up afterward
+```bash
+oc get po -l component=zen-watchdog
+```
+
 ---
 
 #### Potential Issue - EDB Operator To IBM PG Operator Migration Fails Because Pods Do Not Restart
@@ -4227,6 +4247,12 @@ oc patch WatsonSpeech ${INSTANCE} \
 ```
 
 Wait for the Watson Speech customization pods to restart and the custom resource to reach Completed state
+
+---
+
+#### Potential Issue - Zen-Metastore 
+
+
 
 ---
 
