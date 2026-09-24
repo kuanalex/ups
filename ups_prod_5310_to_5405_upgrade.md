@@ -281,16 +281,16 @@ knative-eventing-kafka-knative-eventing-kafka-controller-5   1/1     Running    
 
 If the kafka controller and broker pods are in CrashLoopBackOff status, check the pod logs for OOMKilled status, and if required, increase the memory via the KafkaNodePool
 
-Scale down the Data Governor operator in ups-wx-operators namespace, then proceed with the following steps
+Scale down the Data Governor operator in operators namespace, then proceed with the following steps
 
 For the broker KafkaNodePool
 ```bash
-oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-broker> -n ${PROJECT_CPD_INST_OPERATORS} --type=merge -p '{"spec":{"resources":{"limits":{"memory":"8Gi"},"requests":{"memory":"8Gi"}}}}'
 ```
 
 For the controller KafkaNodePool
 ```bash
-oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n ups-wx-operands --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
+oc patch kafkanodepool <wo-wa-1234-ibm-abcd-controller> -n ${PROJECT_CPD_INST_OPERANDS} --type=merge -p '{"spec":{"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"1Gi"}}}}'
 ```
 
 Once these pods are stable, proceed with upgrading the Events operator, and continue to monitor for memory issues
@@ -543,12 +543,12 @@ During wx_ai upgrade, the WML operator can encounter an error related to PVC siz
 
 Monitor the WML operator logs and yaml for similar symptoms as the previous IFM operator issue
 ```bash
-oc logs ibm-cpd-wml-operator-6d5b5f795b-x258l -n ups-wx-operators | grep -i error
+oc logs ibm-cpd-wml-operator-6d5b5f795b-x258l -n ${PROJECT_CPD_INST_OPERATORS} | grep -i error
 ```
 
 Monitor the WML operator yaml for similar symptoms
 ```bash
-oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258l -n ups-wx-operators
+oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258l -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
 This script addresses Watson Machine Learning (WML) job memory exhaustion and undersized storage volumes by restarting the WML operator pod and modifying its internal templates to increase default job memory limits to 1Gi and PVC storage capacities to 100Gi
@@ -560,12 +560,12 @@ Confirm the script exists in this location on the bastion node and then run the 
 
 Monitor the WML operator logs to ensure that the PVC and memory issue(s) are addressed
 ```bash
-oc logs ibm-cpd-wml-operator-6d5b5f795b-x258 -n ups-wx-operators
+oc logs ibm-cpd-wml-operator-6d5b5f795b-x258 -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
 Check for any errors in the operator pod yaml directly
 ```bash
-oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258 -n ups-wx-operators
+oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258 -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
 Monitor the watsonxai relevant custom resources
@@ -575,13 +575,13 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 Monitor wml reconciliation
 ```bash
-oc get wmlbase wml-cr -n ups-wx-operands -o custom-columns="STATUS:.status.wmlStatus,PROGRESS:.status.progress,MESSAGE:.status.progressMessage,RUNNING:.status.conditions[?(@.type==\"Running\")].status,FAILURE:.status.conditions[?(@.type==\"Failure\")].status"
+oc get wmlbase wml-cr -n ${PROJECT_CPD_INST_OPERANDS} -o custom-columns="STATUS:.status.wmlStatus,PROGRESS:.status.progress,MESSAGE:.status.progressMessage,RUNNING:.status.conditions[?(@.type==\"Running\")].status,FAILURE:.status.conditions[?(@.type==\"Failure\")].status"
 
 ```
 
 Monitor wx_ai reconciliation
 ```bash
-oc get watsonxai watsonxai-cr -n ups-wx-operands -o custom-columns="STATUS:.status.watsonxaiStatus,PROGRESS:.status.progress,MESSAGE:.status.progressMessage"
+oc get watsonxai watsonxai-cr -n ${PROJECT_CPD_INST_OPERANDS} -o custom-columns="STATUS:.status.watsonxaiStatus,PROGRESS:.status.progress,MESSAGE:.status.progressMessage"
 ```
 
 ---
@@ -870,7 +870,7 @@ spec:
 Update the ephemeralDeployment value to a string
 ```bash
 oc patch temporarypatch wo-wa-data-governor-opensearch-ephemeral \
-  -n ups-wx-operands \
+  -n ${PROJECT_CPD_INST_OPERANDS} \
   --type=merge \
   -p '{"spec":{"patch":{"data-governor":{"datagovernoroverride":{"spec":{"dependencies":{"opensearch":{"ephemeralDeployment":"true"}}}}}}}}'
 ```
@@ -1081,7 +1081,7 @@ wo-watson-orchestrate-postgresedb-4                               1/1     Runnin
 Update the memory values by patching the deployment
 ```bash
 oc patch deployment ibm-documentprocessing-operator \
-  -n ups-wx-operators \
+  -n ${PROJECT_CPD_INST_OPERATORS} \
   --type=json \
   -p='[
     {
@@ -1213,7 +1213,7 @@ wo     5.4.0     Patch 5 (8.0.2)   True    All Deployed          45/45      45/4
 
 Check the ifm operator log for errors
 ```bash
-oc describe po ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ups-wx-operators
+oc describe po ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
 Look for this particular error message
@@ -1234,14 +1234,14 @@ Confirm the script exists in this location on the bastion node and then run the 
 /ibm/ifm-inf-proxy-pvc-template-hotfix-5.4.2.sh
 ```
 
-Monitor the ifm operator logs to ensure that the PVC issue is addressed
+Monitor the IFM operator logs to ensure that the PVC issue is addressed
 ```bash
-oc logs ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ups-wx-operators
+oc logs ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
 Check for any errors in the operator pod yaml directly
 ```bash
-oc describe po ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ups-wx-operators
+oc describe po ibm-cpd-watsonx-ai-ifm-operator-6f5894446f-kn699 -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
 ---
@@ -3228,7 +3228,7 @@ Run the script
 Patch the resource configurations from rediscp instance in the 5.4.2 wo custom resource
 ```bash
 oc patch watsonxorchestrate wo \
-  -n ups-wx-operands \
+  -n ${PROJECT_CPD_INST_OPERANDS} \
   --type=merge \
   -p '{
     "spec": {
@@ -3276,7 +3276,7 @@ non_olm:
 
 Review and remove the image_digests section from woservice aiopenscale custom resource
 ```bash
-oc patch woservice aiopenscale -n ups-wx-operands --type='json' -p='[{"op": "remove", "path": "/spec/image_digests"}]'
+oc patch woservice aiopenscale -n ${PROJECT_CPD_INST_OPERANDS} --type='json' -p='[{"op": "remove", "path": "/spec/image_digests"}]'
 ```
 
 Upgrade watsonx_governance
@@ -3312,7 +3312,7 @@ After Watson Speech was upgraded to 5.3.1.0, a hot fix was applied to various im
 
 Remove Watson Speech image digests prior to upgrading
 ```bash
-oc patch watsonspeech speech-cr -n ups-wx-operands --type=json -p='[
+oc patch watsonspeech speech-cr -n ${PROJECT_CPD_INST_OPERANDS} --type=json -p='[
   {"op": "remove", "path": "/spec/global/sttModels/deDe/digest"},
   {"op": "remove", "path": "/spec/global/sttModels/frFrTelephonyLSM/digest"},
   {"op": "remove", "path": "/spec/global/sttModels/nlNlTelephony/digest"},
