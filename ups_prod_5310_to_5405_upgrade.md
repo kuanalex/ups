@@ -3468,35 +3468,6 @@ spec:
 
 ---
 
-#### Upgrade Voice Gateway
-
-Upgrade Voice Gateway
-```bash
-cpd-cli manage install-components \
---license_acceptance=true \
---components=voice_gateway \
---release=${VERSION} \
---patch_id=${PATCH_ID} \
---operator_ns=${PROJECT_CPD_INST_OPERATORS} \
---instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---image_pull_prefix=${IMAGE_PULL_PREFIX} \
---image_pull_secret=${IMAGE_PULL_SECRET} \
---run_storage_tests=false \
---upgrade=true
-```
-
-Monitor voice_gateway upgrade
-```bash
-watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get voicegateway voicegateway-cr -o yaml | grep -A 10 status'
-```
-
-Check the voice_gateway custom resource status
-```bash
-cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
-```
-
----
-
 #### Upgrade Analytics Engine
 
 Upgrade Analytics Engine service
@@ -3759,6 +3730,66 @@ oc patch caservice ca-addon-cr -n ${PROJECT_CPD_INST_OPERANDS} --type merge \
 ```
 
 Recycle the post-ca-translations-job pod and monitor the new pod spins up with the updated image
+
+---
+
+#### Upgrade Voice Gateway (Upgrade this service last for improved observability)
+
+Upgrade Voice Gateway
+```bash
+cpd-cli manage install-components \
+--license_acceptance=true \
+--components=voice_gateway \
+--release=${VERSION} \
+--patch_id=${PATCH_ID} \
+--operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--image_pull_prefix=${IMAGE_PULL_PREFIX} \
+--image_pull_secret=${IMAGE_PULL_SECRET} \
+--run_storage_tests=false \
+--upgrade=true
+```
+
+Monitor voice_gateway upgrade
+```bash
+watch -n 3 'oc get po -A -owide | grep -E -v "([0-9])/\1" | grep -E -v "Completed" && oc get voicegateway voicegateway-cr -o yaml | grep -A 10 status'
+```
+
+Check the voice_gateway custom resource status
+```bash
+cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --components=voice_gateway
+```
+
+---
+
+#### Potential Issue - Post Upgrade Voice Gateway Operator Shows Failed With Immutable Fields From Offline Backup
+
+Voice gateway Operator shows failed with immutable fields from offline backup 
+
+Backup the voicegateway-cr deployment
+```bash
+oc get deploy voicegateway-cr -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > deploy-voicegateway-cr.yaml
+```
+
+After taking the backup, delete the voicegateway-cr deployment
+```bash
+oc delete deploy voicegateway-cr -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+Identify the voice gateway operator pod in the operators namespace
+```bash
+oc get po -n ${PROJECT_CPD_INST_OPERATORS} | grep voice-gateway-operator-controller-manager
+```
+
+Restart the voice gateway operator pod
+```bash
+oc delete po <...voice-gateway-operator-controller-manager...> -n ${PROJECT_CPD_INST_OPERATORS}
+```
+
+Monitor for the voicegateway-cr deployment to be recreated
+```bash
+oc get deploy voicegateway-cr -n ${PROJECT_CPD_INST_OPERANDS}
+```
 
 ---
 
