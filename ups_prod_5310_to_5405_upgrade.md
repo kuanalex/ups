@@ -4250,9 +4250,56 @@ Wait for the Watson Speech customization pods to restart and the custom resource
 
 ---
 
-#### Potential Issue - Zen-Metastore 
+#### Potential Issue - Zen-Metastore Postgres Records Are Not Updated Automatically
 
+Records in postgres need to be updated to match the right version setting it to 'Enabled'
 
+Check the records orchestrate
+```bash
+oc rsh $(oc get pod -l component=zen-metastore -o jsonpath='{.items[0].metadata.name}') \
+  bash -c "psql -U postgres -d zen -c \"SELECT type, state, version, instances FROM add_ons WHERE type='orchestrate';\""
+```
+
+Update the records orchestrate
+```bash
+oc rsh $(oc get pod -l component=zen-metastore -o jsonpath='{.items[0].metadata.name}') \
+  bash -c "psql -U postgres -d zen -c \"UPDATE add_ons SET state='enabled' WHERE version='5.4.0' AND type='orchestrate';\""
+```
+
+Verify the changes for orchestrate
+```bash
+oc rsh $(oc get pod -l component=zen-metastore -o jsonpath='{.items[0].metadata.name}') \
+  bash -c "psql -U postgres -d zen -c \"SELECT type, state, version, instances FROM add_ons WHERE type='orchestrate';\""
+```
+
+Example output
+```bash
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+    type     |   state   | version | instances 
+-------------+-----------+---------+-----------
+ orchestrate |           | -       |         0
+ orchestrate | enabled   | 5.4.0   |         0
+ orchestrate | installed | 5.3.1   |         0
+(3 rows)
+```
+
+**Note**: These steps may be required for other impacted services and versions (WA, TTS, STT)
+
+---
+
+#### Potential Issue - Opensearch Pods Stuck in Init:ContainerStatusUnknown
+
+If you observe any opensearch pods stuck in this status, it is safe to delete those pods
+
+For example
+```bash
+wo-opensearch-cluster-all-001   0/1   Init:ContainerStatusUnknown
+```
+
+Delete the pod and monitor that it comes up cleanly
+```bash
+oc delete po wo-opensearch-cluster-all-001 -n ${PROJECT_CPD_INST_OPERANDS}
+```
 
 ---
 
