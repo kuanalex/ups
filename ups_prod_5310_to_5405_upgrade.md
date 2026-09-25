@@ -4000,30 +4000,30 @@ Private container registry
 oc patch dataprotectionapplication ${DPA_NAME} \
 --namespace=${OADP_PROJECT} \
 --type=json \
--p="[
+-p='[
   {
-    \"op\": \"replace\",
-    \"path\": \"/spec/configuration/velero/customPlugins\",
-    \"value\": [
+    "op": "replace",
+    "path": "/spec/configuration/velero/customPlugins",
+    "value": [
       {
-        \"image\": \"${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs/cpfs-oadp-plugins:latest\",
-        \"name\": \"cpfs-oadp-plugin\"
+        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/cpopen/cpfs/cpfs-oadp-plugins:latest",
+        "name": "cpfs-oadp-plugin"
       },
       {
-        \"image\": \"${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/cpdbr-velero-plugin:${VERSION}\",
-        \"name\": \"cpdbr-velero-plugin\"
+        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/cpopen/cpd/cpdbr-velero-plugin:'"${VERSION}"'",
+        "name": "cpdbr-velero-plugin"
       },
       {
-        \"image\": \"${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/swhub-velero-plugin:${VERSION}\",
-        \"name\": \"swhub-velero-plugin\"
+        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/cpopen/cpd/swhub-velero-plugin:'"${VERSION}"'",
+        "name": "swhub-velero-plugin"
       },
       {
-        \"image\": \"${PRIVATE_REGISTRY_LOCATION}/db2u/db2u-velero-plugin:${VERSION}\",
-        \"name\": \"db2u-velero-plugin\"
+        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/db2u/db2u-velero-plugin:'"${VERSION}"'",
+        "name": "db2u-velero-plugin"
       }
     ]
   }
-]"
+]'
 ```
 
 Upgrade the cpdbr-tenant service
@@ -4343,6 +4343,14 @@ Delete the pod and monitor that it comes up cleanly
 ```bash
 oc delete po wo-opensearch-cluster-all-001 -n ${PROJECT_CPD_INST_OPERANDS}
 ```
+
+---
+
+#### Potential Issue - Assistant Builder Not Accessible To Builders/Agents, only Admins
+
+Had to double apply HF1 to fix this, due to HF1 being applied too early causing a missed migration job, related to ‘data-service-migration‘
+
+Re-run HF1 after WxO and WA are fully reconciled to address this issue
 
 ---
 
