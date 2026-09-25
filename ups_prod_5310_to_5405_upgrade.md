@@ -2665,7 +2665,7 @@ DROP TABLE IF EXISTS migration_log;
 
 ---
 
-#### Potential Issue - wo-archer-server-db-schema-job stuck after applying WxO hotfix
+#### Potential Issue - wo-archer-server-db-schema-job stuck after applying WxO hotfix1
 
 Confirm if archer-db-schema job is in Completed state
 ```bash
@@ -3083,7 +3083,7 @@ Run the script
 
 ---
 
-Patch the resource configurations from rediscp instance in the 5.4.2 wo custom resource
+Once Orchestrate hotfix1 is completed and fully reconciled, patch the resource configurations from rediscp instance in the 5.4.2 wo custom resource
 ```bash
 oc patch watsonxorchestrate wo \
   -n ${PROJECT_CPD_INST_OPERANDS} \
@@ -3502,14 +3502,14 @@ The permanent fix has been delivered to 31.0.0 branch which is targeted for CPD 
 Fix the CrashLoopBackOff by first patching the caservice custom resource
 ```bash
 oc patch caservices ca-addon-cr \
-  -n <NAMESPACE> \
+  -n ups-wx-operands \
   --type=merge \
   -p '{"spec":{"enableInstanaMetricCollection": false}}'
 ```
 
 Wait for the pod to recover
 ```bash
-oc get pods -n <NAMESPACE> -l app=ibm-cognos-addon-sp -w
+oc get pods -n ups-wx-operands -l app=ibm-cognos-addon-sp -w
 # Wait for: ibm-cognos-addon-sp-deployment-xxx   1/1   Running   0
 ```
 
@@ -3609,7 +3609,7 @@ Expected: Version: 30.0.4  |  Provision status: UPGRADED  |  Upgrade version opt
 
 Once 31.0.0 is available, or if a hotfix digest is provided for 30.0.4, apply it via
 ```bash
-oc patch caservices ca-addon-cr -n <NAMESPACE> --type=merge \
+oc patch caservices ca-addon-cr -n ups-wx-operands --type=merge \
   -p '{"spec":{"hotfix_digests":{"ibm_cognos_addon_sp":"sha256:450720b26835a99f7853063f4fd39b1e03e4e6beae1c7d67f626684009768192"}}}'
 After the hotfix image is running and confirmed healthy, enableInstanaMetricCollection can be safely re-enabled if required.
 ```
@@ -3728,6 +3728,11 @@ After upgrading service custom resources, some services require additional insta
 ---
 
 #### Upgrading Service Instances
+
+Identify the CPD_PROFILE_NAME you will use for the following command
+```bash
+cpd-cli config profiles list
+```
 
 Get a list of all service instances using the following command
 ```bash
@@ -4204,7 +4209,7 @@ oc delete po wo-opensearch-cluster-all-001 -n ${PROJECT_CPD_INST_OPERANDS}
 
 ---
 
-#### Potential Issue - Assistant Builder Not Accessible To Builders/Agents, only Admins
+#### Potential Issue - Assistant Builder Not Accessible To Builders/Agents, Only Admins
 
 Had to double apply HF1 to fix this, due to HF1 being applied too early causing a missed migration job, related to ‘data-service-migration‘
 
@@ -4259,7 +4264,8 @@ The following script was used to address this issue in Prod-Central and will nee
 export CPD_USER="cr@ups.com"
 export CPD_APIKEY="blahblahblah"
 # Use the following string for the CPD_ROUTE variable  'https://<cpd_host>'
-export CPD_ROUTE="https://cpd.c1.ccca.ams1907.com"
+# Update the CPD_ROUTE to represent Prod-East route value
+export CPD_ROUTE="https://cpd.c1.ccca.ams1907.com" 
 export TOKEN=$(curl -sk -X POST "${CPD_ROUTE}/icp4d-api/v1/authorize" -H "Content-Type: application/json" -d "{\"username\":\"${CPD_USER}\",\"api_key\":\"${CPD_APIKEY}\"}" | jq -r '.token')
 export ACCESS_TOKEN=$(curl -k --location --request POST "${CPD_ROUTE}/usermgmt/v1/usermgmt/getTimedToken" --header "Authorization: Bearer ${TOKEN}" --header 'Content-Type: application/json' --header 'lifetime: 0' | jq -r '.accessToken')
 echo "Your non-expiring access token is:"
