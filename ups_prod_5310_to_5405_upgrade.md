@@ -1648,7 +1648,35 @@ chmod 775 5.4.2-Hotfix1.sh
 **IMPORTANT**: Before you run the 5.4.2-Hotfix1.sh script, confirm the following checkpoints have been reached
 ```bash
 Condition 1: WA CR is fully deployed and verified
-Condition 2: WO CR mentions langfuse is deployed and verified
+```
+
+Condition 2: WO CR mentions Langfuse reaches the verified state as shown below 
+
+Check the wo yaml
+```bash
+oc get wo wo -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
+```
+
+Look for this specific status for langfuse
+```bash
+deployedResources:
+        - app-secret(Secret):langfuse/cpd-instance
+        - credentials-secret(Secret):langfuse-credentials/cpd-instance
+        - web-deployment(Deployment):wo-langfuse-web/cpd-instance
+        - web-service(Service):wo-langfuse-web/cpd-instance
+        - worker-deployment(Deployment):wo-langfuse-worker/cpd-instance
+        managedResources:
+        - app-secret(Secret):langfuse/cpd-instance
+        - credentials-secret(Secret):langfuse-credentials/cpd-instance
+        - web-deployment(Deployment):wo-langfuse-web/cpd-instance
+        - web-service(Service):wo-langfuse-web/cpd-instance
+        - worker-deployment(Deployment):wo-langfuse-worker/cpd-instance
+        name: langfuse
+        resourceCount:
+          started: 5
+          total: 5
+        verified: true
+      - deployed: true
 ```
  
 Once the previously mentioned validations have been made, proceed to run the script
