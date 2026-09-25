@@ -426,26 +426,6 @@ Monitor platform upgrade progress (this takes 60-80 minutes)
 watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" && echo "=== ZenService Progress ===" && oc get zenservice lite-cr -o yaml | grep progress && echo "=== Ibmcpd Progress ===" && oc get ibmcpd ibmcpd-cr -o yaml | grep progress'
 ```
 
-After platform is upgraded, add a new configuration to the product-configmap configmap
-```bash
-oc edit cm product-configmap -n ${PROJECT_CPD_INST_OPERANDS}
-```
-
-Add this field in the 'data' section
-```bash
-SERVICEABILITY_PVC_SIZE: 10Gi
-```
-
-After adding the configuration, restart the zen-watchdog pod(s)
-```bash
-oc delete po -l component=zen-watchdog
-```
-
-Monitor for the zen-watchdog to start up afterward
-```bash
-oc get po -l component=zen-watchdog
-```
-
 ---
 
 #### Potential Issue - EDB Operator To IBM PG Operator Migration Fails Because Pods Do Not Restart
@@ -479,6 +459,30 @@ Symptom 3 - The common-service-db-x replica pod fails with an error message simi
 ```
 
 **Workaround**: Manually delete the failed common-service-db-x pod so that it restarts, and the pod comes back up with the correct image and permissions, repeating this step for any other failed replica 
+
+---
+
+#### Potential Issue - Post Platform Upgrade Issue With 'zen-watchdog-serviceability-job' PVC Sizing
+
+After platform is upgraded, add a new configuration to the product-configmap configmap
+```bash
+oc edit cm product-configmap -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+Add this field in the 'data' section
+```bash
+SERVICEABILITY_PVC_SIZE: 10Gi
+```
+
+After adding the configuration, restart the zen-watchdog pod(s)
+```bash
+oc delete po -l component=zen-watchdog
+```
+
+Monitor for the zen-watchdog to start up afterward
+```bash
+oc get po -l component=zen-watchdog
+```
 
 ---
 
@@ -548,10 +552,10 @@ oc logs ibm-cpd-wml-operator-6d5b5f795b-x258l -n ${PROJECT_CPD_INST_OPERATORS} |
 
 Monitor the WML operator yaml for similar symptoms
 ```bash
-oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258l -n ${PROJECT_CPD_INST_OPERATORS}
+oc describe po ibm-cpd-wml-operator-6d5b5f795b-x258 -n ${PROJECT_CPD_INST_OPERATORS}
 ```
 
-This script addresses Watson Machine Learning (WML) job memory exhaustion and undersized storage volumes by restarting the WML operator pod and modifying its internal templates to increase default job memory limits to 1Gi and PVC storage capacities to 100Gi
+The following script addresses Watson Machine Learning (WML) job memory exhaustion and undersized storage volumes by restarting the WML operator pod and modifying its internal templates to increase default job memory limits to 1Gi and PVC storage capacities to 100Gi
 
 Confirm the script exists in this location on the bastion node and then run the WML workaround script 
 ```bash
@@ -599,66 +603,18 @@ Wx_ai reconcile will not complete until this job runs to completion, but this jo
 
 Granite/BYOM configmap needs to be cleaned up using this expected format
 
-Modify ibm-granite-3-2-8b-instruct-byom-v2 configmap to the correct model
-
+Modify ibm-granite-3-2-8b-instruct-byom-v2 configmap to the correct productVersion
+```bash
 oc edit cm ibm-granite-3-2-8b-instruct-byom-v2 -n ${PROJECT_CPD_INST_OPERANDS}
+```
+
+
 ```bash
 apiVersion: v1
 data:
   model: |
     ibm_granite_3_2_8b_instruct_byom_v2:
-      pvc_name: granite-3-2-8b-instruct-pvc
-      pvc_size: 1000Gi
-      command:
-      - /scripts/startup.sh
-      isvc_yaml_name: isvc.yaml.j2
-      dir_name: granite-3-2-8b-instruct
-      force_apply: false
-      serving_runtime: vllm-serving-runtime
-      storage_uri: pvc://granite-3-2-8b-instruct-pvc/
-      env:
-      - name: VLLM_CACHE_ROOT
-        value: /tmp/vllm_cache
-      - name: MODEL_NAME
-        value: /mnt/models/granite-3-2-8b-instruct
-      - name: DTYPE_STR
-        value: float16
-      - name: MAX_NUM_SEQS
-        value: '16'
-      - name: MAX_NEW_TOKENS
-        value: '16384'
-      - name: MAX_SEQUENCE_LENGTH
-        value: '131072'
-      - name: SERVED_MODEL_NAME
-        value: ibm/granite-3-2-8b-instruct-byom-v2
-      - name: DISABLE_PROMPT_LOGPROBS
-        value: 'true'
-      - name: ENABLE_AUTO_TOOL_CHOICE
-        value: 'true'
-      - name: TOOL_CALL_PARSER
-        value: granite
-      - name: CHAT_TEMPLATE
-        value: /mnt/models/granite-3-2-8b-instruct/granite-3-2b-instruct-template.jinja
-      - name: NUM_GPUS
-        value: '1'
-      - name: CUDA_VISIBLE_DEVICES
-        value: '0'
-      - name: HUGGINGFACE_HUB_CACHE
-        value: /mnt/models/
-      - name: HF_MODULES_CACHE
-        value: /tmp/huggingface/modules
-      - name: HF_DATASETS_OFFLINE
-        value: '1'
-      - name: TRANSFORMERS_OFFLINE
-        value: '1'
-      - name: PORT
-        value: '3000'
-      - name: MAX_LOG_LEN
-        value: '100'
-      - name: GPRC_PORT
-        value: '8033'
-      - name: ENABLE_VLLM_LOG_REQUESTS
-        value: 'TRUE'
+      ...
       annotations:
         cloudpakId: 5e4c7dd451f14946bc298e18851f3746
         cloudpakName: IBM watsonx.ai
@@ -667,121 +623,10 @@ data:
         productID: 3a6d4448ec8342279494bc22e36bc318
         productMetric: VIRTUAL_PROCESSOR_CORE
         productName: IBM Watsonx.ai
-        productVersion: 13.0.4   ## UPDATE THIS LINE TO 13.0.4 when upgrading watsonx.ai IFM
+        productVersion: 13.0.4   ## *** UPDATE THIS LINE TO 13.0.4 when upgrading watsonx.ai IFM *** ##
         cloudpakInstanceId: 6086e467-6e3f-4037-9aef-42ef6d983ede
         model-id: ibm/granite-3-2-8b-instruct-byom-v2
-      labels_syom:
-        app.kubernetes.io/managed-by: ibm-cpd-watsonx-ai-ifm-operator
-        app.kubernetes.io/instance: watsonxaiifm
-        app.kubernetes.io/name: watsonxaiifm
-        icpdsupport/addOnId: watsonx_ai_ifm
-        icpdsupport/app: api
-        release: watsonxaiifm
-        icpdsupport/module: ibm-granite-3-2-8b-instruct-byom-v2
-        app: text-ibm-granite-3-2-8b-instruct-byom-v2
-        component: fmaas-inference-server
-        bam-placement: colocate
-        syom_model: ibm--granite-3-2-8b-instruct-byom-v2
-      args: []
-      wx_inference_proxy:
-        ibm/granite-3-2-8b-instruct-byom-v2:
-          global_custom_foundation_model: true
-          enabled:
-          - 'true'
-          label: Granite 3.2 8B Instruct (BYOM v2)
-          provider: ibm
-          source: Hugging Face
-          functions:
-          - text_generation
-          - text_chat
-          tags:
-          - vllm_runtime
-          short_description: IBM Granite 3.2 8B Instruct, deployed as a custom global foundation model.
-          long_description: IBM Granite 3.2 8B Instruct served from the existing UPS model PVC as a separately
-            identified custom global foundation model.
-          task_ids:
-          - question_answering
-          - generation
-          - summarization
-          - classification
-          - extraction
-          tasks_info:
-            question_answering:
-              task_ratings:
-                quality: 0
-                cost: 0
-            generation:
-              task_ratings:
-                quality: 0
-                cost: 0
-            summarization:
-              task_ratings:
-                quality: 0
-                cost: 0
-            classification:
-              task_ratings:
-                quality: 0
-                cost: 0
-            extraction:
-              task_ratings:
-                quality: 0
-                cost: 0
-          min_shot_size: 1
-          tier: class_2
-          number_params: 8b
-          lifecycle:
-            available:
-              since_version: 12.0.1
-      node_selector:
-        nvidia.com/gpu.product: NVIDIA-A100-SXM4-80GB
-      volumeMounts:
-      - name: home
-        mountPath: /home/vllm
-      - name: tmp
-        mountPath: /tmp
-      - name: shm
-        mountPath: /dev/shm
-      - name: startup-script
-        mountPath: /scripts
-      volumes:
-      - name: home
-        emptyDir: {}
-      - name: tmp
-        emptyDir: {}
-      - name: shm
-        emptyDir:
-          medium: Memory
-          sizeLimit: 4Gi
-      - name: startup-script
-        configMap:
-          name: vllm-startup-script
-          defaultMode: 493
-    ibm_granite_3_2_8b_instruct_byom_v2_resources:
-      limits:
-        cpu: '2'
-        memory: 32Gi
-        nvidia.com/gpu: '1'
-        ephemeral-storage: 1Gi
-      requests:
-        cpu: '1'
-        memory: 4Gi
-        nvidia.com/gpu: '1'
-        ephemeral-storage: 10Mi
-    ibm_granite_3_2_8b_instruct_byom_v2_replicas: 3
-kind: ConfigMap
-metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"v1","data":{"model":"ibm_granite_3_2_8b_instruct_byom_v2:\n  pvc_name: granite-3-2-8b-instruct-pvc\n  pvc_size: 1000Gi\n  command:\n  - /scripts/startup.sh\n  isvc_yaml_name: isvc.yaml.j2\n  dir_name: granite-3-2-8b-instruct\n  force_apply: false\n  serving_runtime: vllm-serving-runtime\n  storage_uri: pvc://granite-3-2-8b-instruct-pvc/\n  env:\n  - name: VLLM_CACHE_ROOT\n    value: /tmp/vllm_cache\n  - name: MODEL_NAME\n    value: /mnt/models/granite-3-2-8b-instruct\n  - name: DTYPE_STR\n    value: float16\n  - name: MAX_NUM_SEQS\n    value: '16'\n  - name: MAX_NEW_TOKENS\n    value: '16384'\n  - name: MAX_SEQUENCE_LENGTH\n    value: '131072'\n  - name: SERVED_MODEL_NAME\n    value: ibm/granite-3-2-8b-instruct-byom-v2\n  - name: DISABLE_PROMPT_LOGPROBS\n    value: 'true'\n  - name: ENABLE_AUTO_TOOL_CHOICE\n    value: 'true'\n  - name: TOOL_CALL_PARSER\n    value: granite\n  - name: CHAT_TEMPLATE\n    value: /mnt/models/granite-3-2-8b-instruct/granite-3-2b-instruct-template.jinja\n  - name: NUM_GPUS\n    value: '1'\n  - name: CUDA_VISIBLE_DEVICES\n    value: '0'\n  - name: HUGGINGFACE_HUB_CACHE\n    value: /mnt/models/\n  - name: HF_MODULES_CACHE\n    value: /tmp/huggingface/modules\n  - name: HF_DATASETS_OFFLINE\n    value: '1'\n  - name: TRANSFORMERS_OFFLINE\n    value: '1'\n  - name: PORT\n    value: '3000'\n  - name: MAX_LOG_LEN\n    value: '100'\n  - name: GPRC_PORT\n    value: '8033'\n  - name: ENABLE_VLLM_LOG_REQUESTS\n    value: 'TRUE'\n  annotations:\n    cloudpakId: 5e4c7dd451f14946bc298e18851f3746\n    cloudpakName: IBM watsonx.ai\n    productChargedContainers: All\n    productCloudpakRatio: '1:1'\n    productID: 3a6d4448ec8342279494bc22e36bc318\n    productMetric: VIRTUAL_PROCESSOR_CORE\n    productName: IBM Watsonx.ai\n    productVersion: 12.1.0\n    cloudpakInstanceId: 6086e467-6e3f-4037-9aef-42ef6d983ede\n    model-id: ibm/granite-3-2-8b-instruct-byom-v2\n  labels_syom:\n    app.kubernetes.io/managed-by: ibm-cpd-watsonx-ai-ifm-operator\n    app.kubernetes.io/instance: watsonxaiifm\n    app.kubernetes.io/name: watsonxaiifm\n    icpdsupport/addOnId: watsonx_ai_ifm\n    icpdsupport/app: api\n    release: watsonxaiifm\n    icpdsupport/module: ibm-granite-3-2-8b-instruct-byom-v2\n    app: text-ibm-granite-3-2-8b-instruct-byom-v2\n    component: fmaas-inference-server\n    bam-placement: colocate\n    syom_model: ibm--granite-3-2-8b-instruct-byom-v2\n  args: []\n  wx_inference_proxy:\n    ibm/granite-3-2-8b-instruct-byom-v2:\n      global_custom_foundation_model: true\n      enabled:\n      - 'true'\n      label: Granite 3.2 8B Instruct (BYOM v2)\n      provider: ibm\n      source: Hugging Face\n      functions:\n      - text_generation\n      - text_chat\n      tags:\n      - vllm_runtime\n      short_description: IBM Granite 3.2 8B Instruct, deployed as a custom global foundation model.\n      long_description: IBM Granite 3.2 8B Instruct served from the existing UPS model PVC as a separately\n        identified custom global foundation model.\n      task_ids:\n      - question_answering\n      - generation\n      - summarization\n      - classification\n      - extraction\n      tasks_info:\n        question_answering:\n          task_ratings:\n            quality: 0\n            cost: 0\n        generation:\n          task_ratings:\n            quality: 0\n            cost: 0\n        summarization:\n          task_ratings:\n            quality: 0\n            cost: 0\n        classification:\n          task_ratings:\n            quality: 0\n            cost: 0\n        extraction:\n          task_ratings:\n            quality: 0\n            cost: 0\n      min_shot_size: 1\n      tier: class_2\n      number_params: 8b\n      lifecycle:\n        available:\n          since_version: 12.0.1\n  node_selector:\n    nvidia.com/gpu.product: NVIDIA-A100-SXM4-80GB\n  volumeMounts:\n  - name: home\n    mountPath: /home/vllm\n  - name: tmp\n    mountPath: /tmp\n  - name: shm\n    mountPath: /dev/shm\n  - name: startup-script\n    mountPath: /scripts\n  volumes:\n  - name: home\n    emptyDir: {}\n  - name: tmp\n    emptyDir: {}\n  - name: shm\n    emptyDir:\n      medium: Memory\n      sizeLimit: 4Gi\n  - name: startup-script\n    configMap:\n      name: vllm-startup-script\n      defaultMode: 493\nibm_granite_3_2_8b_instruct_byom_v2_resources:\n  limits:\n    cpu: '2'\n    memory: 32Gi\n    nvidia.com/gpu: '1'\n    ephemeral-storage: 1Gi\n  requests:\n    cpu: '1'\n    memory: 4Gi\n    nvidia.com/gpu: '1'\n    ephemeral-storage: 10Mi\nibm_granite_3_2_8b_instruct_byom_v2_replicas: 3\n"},"kind":"ConfigMap","metadata":{"annotations":{},"finalizers":["watsonxaiifm.cpd.ibm.com/finalizer"],"labels":{"syom":"watsonxaiifm_extra_models_config"},"name":"ibm-granite-3-2-8b-instruct-byom-v2","namespace":"ups-wx-operands"}}
-  creationTimestamp: "2026-09-18T10:57:51Z"
-  finalizers:
-  - watsonxaiifm.cpd.ibm.com/finalizer
-  labels:
-    syom: watsonxaiifm_extra_models_config
-  name: ibm-granite-3-2-8b-instruct-byom-v2
-  namespace: ups-wx-operands
-  resourceVersion: "1788257499"
-  uid: e907dca3-ae37-4090-b827-b64546feb03c
+        ...
 ```
 
 ---
@@ -884,7 +729,7 @@ This appears to be a [Failure for the ClickHouse / Langfuse stack deployed on Wa
 
 Confirm the crash reason from pod logs
 ```bash
-oc logs -n cpd-instance-1 -l app.kubernetes.io/component=langfuse-web -c wo-langfuse-web --tail=20
+oc logs -n ups-wx-operands -l app.kubernetes.io/component=langfuse-web -c wo-langfuse-web --tail=20
 ```
 
 Pod logs show the following error messages
@@ -896,12 +741,12 @@ Applying clickhouse migrations failed. Common causes:
 Exiting...
 ```
 
-Check the migration table on both shards
+Check the migration table on both pods
 ```bash
-oc exec -n cpd-instance-1 chi-application-default-shard-1-0-0 -c clickhouse -- \
+oc exec -n ups-wx-operands chi-application-default-shard-1-0-0 -c clickhouse -- \
  clickhouse-client --query "SELECT * FROM default.schema_migrations ORDER BY version"
  
-oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
+oc exec -n ups-wx-operands chi-application-default-shard-1-1-0 -c clickhouse -- \
  clickhouse-client --query "SELECT * FROM default.schema_migrations ORDER BY version"
 ```
 
@@ -913,37 +758,37 @@ Any row with dirty = 1 is the cause
 
 Step 1 — Scale down wo-langfuse-web and wo-operator to stop new dirty rows being written
 ```bash
-oc scale deployment -n cpd-instance-1 wo-langfuse-web --replicas=0
-oc scale deployment -n cpd-operators wo-operator   --replicas=0
+oc scale deployment -n ups-wx-operands wo-langfuse-web --replicas=0
+oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator   --replicas=0
 ```
 
 Confirm pods are gone
 ```bash
-oc get pods -n cpd-instance-1 -l app.kubernetes.io/component=langfuse-web
-oc get pods -n cpd-operators -l app.kubernetes.io/component=watson-orchestrate 
+oc get pods -n ups-wx-operands -l app.kubernetes.io/component=langfuse-web
+oc get pods -n ${PROJECT_CPD_INST_OPERATORS} -l app.kubernetes.io/component=watson-orchestrate 
 ```
 
 Step 2 — Clear all dirty rows on shard 1-0-0
 ```bash
-oc exec -n cpd-instance-1 chi-application-default-shard-1-0-0 -c clickhouse -- \
+oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-0-0 -c clickhouse -- \
  clickhouse-client --query \
  "ALTER TABLE default.schema_migrations UPDATE dirty = 0 WHERE dirty = 1"
 ```
 
 Step 3 — Clear all dirty rows on shard 1-1-0
 ```bash
-oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
+oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-1-0 -c clickhouse -- \
  clickhouse-client --query \
  "ALTER TABLE default.schema_migrations UPDATE dirty = 0 WHERE dirty = 1"
 ```
 
-Step 4 — Verify both shards are clean (should return 0)
+Step 4 — Verify both pods are clean (should return 0)
 ```bash
-oc exec -n cpd-instance-1 chi-application-default-shard-1-0-0 -c clickhouse -- \
+oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-0-0 -c clickhouse -- \
  clickhouse-client --query \
  "SELECT count() FROM default.schema_migrations WHERE dirty = 1"
 
-oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
+oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-1-0 -c clickhouse -- \
  clickhouse-client --query \
  "SELECT count() FROM default.schema_migrations WHERE dirty = 1"
 ```
@@ -952,26 +797,26 @@ oc exec -n cpd-instance-1 chi-application-default-shard-1-1-0 -c clickhouse -- \
 
 Step 5 — Scale wo-langfuse-web back up
 ```bash
-oc scale deployment -n cpd-instance-1 wo-langfuse-web --replicas=1
+oc scale deployment -n ${PROJECT_CPD_INST_OPERANDS} wo-langfuse-web --replicas=1
 ```
 
 Step 6 — Watch the pod recover
 ```bash
-oc get pods -n cpd-instance-1 -l app.kubernetes.io/component=langfuse-web -w
-oc get pods -n cpd-operators -l app.kubernetes.io/component=watson-orchestrate -w
+oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -l app.kubernetes.io/component=langfuse-web -w
+oc get pods -n ${PROJECT_CPD_INST_OPERATORS} -l app.kubernetes.io/component=watson-orchestrate -w
 ```
 
 Expected outcome: pod reaches 2/2 Running with 0 restarts within ~60 seconds
 
 Step 7 — Once the langfuse pods back, Scale up wo-operator back up and ensure its running fine
 ```bash
-oc scale deployment -n cpd-operators wo-operator  --replicas=1 
+oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator  --replicas=1 
 ```
 
 **Notes**:
 - The HPA will automatically restore the desired replica count after scale-up.
 - This issue typically appears after a failed Langfuse upgrade/rollout where the new pod started a migration but was terminated mid-way.
-- Both shards must be cleaned. ClickHouse uses ReplicatedMergeTree so the schema_migrations table exists independently on each shard replica.
+- Both pods must be cleaned. ClickHouse uses ReplicatedMergeTree so the schema_migrations table exists independently on each shard replica.
 
 After the above steps are completed, the migration still needs to completed within a langfuse worker pod
 
@@ -1163,7 +1008,7 @@ apiVersion: operator.ibm.com/v1
 kind: IBMLicensingDefinition
 metadata:
   name: addonidwatsonxdata
-  namespace: cpd-instance
+  namespace: ups-wx-operands
   labels:
     icpdsupport/addOnId: watsonx_data
     icpdsupport/entitlement: watsonx-orchestrate
@@ -1197,7 +1042,7 @@ EOF
 
 Delete the lakehouse operator pod
 ```bash
-oc delete pod -n cpd-operators ibm-lakehouse-controller-manager-664ddf845c-xvzsh
+oc delete pod -n ${PROJECT_CPD_INST_OPERATORS} ibm-lakehouse-controller-manager-664ddf845c-xvzsh
 ```
 
 Orchestrate completes Milvus deployment afterward
@@ -2645,7 +2490,7 @@ spec:
         - -c
         env:
         - name: DB_HOST
-          value: wo-watson-orchestrate-postgresedb-rw.cpd-instance-1.svc.cluster.local
+          value: wo-watson-orchestrate-postgresedb-rw.ups-wx-operands.svc.cluster.local
         - name: DB_PORT
           value: "5432"
         - name: DB_USER
@@ -2740,14 +2585,14 @@ $OC_LOGIN
 Extract the current ATM server configuration from the Kubernetes secret
 ```bash
 kubectl get secret wo-agentic-task-manager-server-env \
-  -n cpd-instance-1 \
+  -n ${PROJECT_CPD_INST_OPERANDS} \
 -o jsonpath='{.data.\.secret\.env}' | base64 --decode | grep SERVER_INTERNAL
 ```
 
 Important: Store the value of SERVER_INTERNAL_HOSTNAME for later use, ensure that the value for SERVER_INTERNAL_PROTOCOL is set to https and SERVER_INTERNAL_PORT is set to 9045
 ```bash
 SERVER_INTERNAL_PROTOCOL=https
-SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.cpd-instance-1.svc.cluster.local
+SERVER_INTERNAL_HOSTNAME=wo-agentic-task-manager.ups-wx-operands.svc.cluster.local
 SERVER_INTERNAL_PORT=9045
 ```
 
@@ -2765,8 +2610,8 @@ SET atm_migration.new_url = 'https://<SERVER_INTERNAL_HOSTNAME>:9045';
 
 Example configuration:
 ```
-SET atm_migration.old_url = 'http://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9044';
-SET atm_migration.new_url = 'https://wo-agentic-task-manager.cpd-instance-1.svc.cluster.local:9045';
+SET atm_migration.old_url = 'http://wo-agentic-task-manager.ups-wx-operands.svc.cluster.local:9044';
+SET atm_migration.new_url = 'https://wo-agentic-task-manager.ups-wx-operands.svc.cluster.local:9045';
 ```
 
 To run the migration script on PostgreSQL database
@@ -2905,8 +2750,8 @@ With the following contents
 #   NS=<wxo-namespace> ./wxo-hotfix0-db-schema-job-unblock.sh --fix
 #
 #   # Examples:
-#   NS=cpd-instance-1 ./wxo-hotfix0-db-schema-job-unblock.sh
-#   NS=cpd-instance-1 ./wxo-hotfix0-db-schema-job-unblock.sh --fix
+#   NS=ups-wx-operands ./wxo-hotfix0-db-schema-job-unblock.sh
+#   NS=ups-wx-operands ./wxo-hotfix0-db-schema-job-unblock.sh --fix
 #
 # REQUIREMENTS
 # ------------
