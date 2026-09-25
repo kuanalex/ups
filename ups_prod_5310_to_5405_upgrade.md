@@ -758,13 +758,13 @@ Any row with dirty = 1 is the cause
 Step 1 — Scale down wo-langfuse-web and wo-operator to stop new dirty rows being written
 ```bash
 oc scale deployment -n ups-wx-operands wo-langfuse-web --replicas=0
-oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator --replicas=0
+oc scale deployment -n ups-wx-operators wo-operator --replicas=0
 ```
 
 Confirm pods are gone
 ```bash
 oc get pods -n ups-wx-operands -l app.kubernetes.io/component=langfuse-web
-oc get pods -n ${PROJECT_CPD_INST_OPERATORS} -l app.kubernetes.io/component=watson-orchestrate 
+oc get pods -n ups-wx-operators -l app.kubernetes.io/component=watson-orchestrate 
 ```
 
 Step 2 — Clear all dirty rows on shard 1-0-0
