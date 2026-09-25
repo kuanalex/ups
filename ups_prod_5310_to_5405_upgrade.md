@@ -1799,8 +1799,14 @@ Make the script executable
 ```bash
 chmod 775 5.4.2-Hotfix1.sh
 ```
+
+**IMPORTANT**: Before you run the 5.4.2-Hotfix1.sh script, confirm the following checkpoints have been reached
+```bash
+Condition 1: WA CR is fully deployed and verified
+Condition 2: WO CR mentions langfuse is deployed and verified
+```
  
-Run the script
+Once the previously mentioned validations have been made, proceed to run the script
 ```bash
 nohup sh 5.4.2-Hotfix1.sh &
 ```
