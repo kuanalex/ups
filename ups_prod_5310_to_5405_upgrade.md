@@ -4004,22 +4004,22 @@ oc patch dataprotectionapplication ${DPA_NAME} \
   {
     "op": "replace",
     "path": "/spec/configuration/velero/customPlugins",
-    "value": [
-      {
-        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/cpopen/cpfs/cpfs-oadp-plugins:latest",
-        "name": "cpfs-oadp-plugin"
+    "value": [ 
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpfs/cpfs-oadp-plugins:latest", 
+        "name": "cpfs-oadp-plugin" 
       },
-      {
-        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/cpopen/cpd/cpdbr-velero-plugin:'"${VERSION}"'",
-        "name": "cpdbr-velero-plugin"
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/cpdbr-velero-plugin":'"${VERSION}"'",
+        "name": "cpdbr-velero-plugin" 
       },
-      {
-        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/cpopen/cpd/swhub-velero-plugin:'"${VERSION}"'",
-        "name": "swhub-velero-plugin"
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/cpopen/cpd/swhub-velero-plugin:'"${VERSION}"'", 
+        "name": "swhub-velero-plugin" 
       },
-      {
-        "image": "'"${PRIVATE_REGISTRY_LOCATION}"'/db2u/db2u-velero-plugin:'"${VERSION}"'",
-        "name": "db2u-velero-plugin"
+      { 
+        "image": "${PRIVATE_REGISTRY_LOCATION}/db2u/db2u-velero-plugin:'"${VERSION}"'",
+        "name": "db2u-velero-plugin" 
       }
     ]
   }
