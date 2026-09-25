@@ -1013,7 +1013,7 @@ metadata:
     icpdsupport/addOnId: watsonx_data
     icpdsupport/entitlement: watsonx-orchestrate
   annotations:
-    cloudpakId: "<---obtain this value from watsonxaiifm-configmap--->" # for example ""5e4c7dd451f14946bc298e18851f3746""
+    cloudpakId: 5e4c7dd451f14946bc298e18851f3746
     cloudpakName: "IBM watsonx Orchestrate Cartridge"
     productID: "0be53fb8946d4b82a770f82d60f05657"
     productMetric: "FREE"
@@ -1023,12 +1023,12 @@ spec:
   condition:
     metadata:
       annotations:
-        cloudpakInstanceId:  "<---obtain this value from watsonxaiifm-configmap--->" # for example "3edfc5f2-f5c1-4132-95bc-7aad0a7e67f6"
+        cloudpakInstanceId: d694c85e-c053-48b0-8720-c64e290c11dd
       labels:
         icpdsupport/addOnId: watsonx_data
   scope: cluster
   set:
-    cloudpakId: "<---obtain this value from watsonxaiifm-configmap--->" # for example ""5e4c7dd451f14946bc298e18851f3746""
+    cloudpakId: 5e4c7dd451f14946bc298e18851f3746
     cloudpakName: "IBM watsonx Orchestrate Cartridge"
     productID: "0be53fb8946d4b82a770f82d60f05657"
     productName: "IBM watsonx Orchestrate"
