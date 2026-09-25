@@ -338,41 +338,21 @@ Login to the cluster
 ${CPDM_OC_LOGIN}
 ```
 
-Apply the prod license for IBM Software Hub
+Apply the prod license for IBM Software Hub, watsonx.ai, watsonx.governance, watsonx Orchestrate, Watson Speech, and Cognos Analytics in bulk
 ```bash
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cpd-enterprise
-```
-
-Apply watsonx.ai prod license
-```bash
-cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}  --entitlement=watsonx-ai 
-```
-
-Apply watsonx.governance prod license(s)
-```bash
+cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-ai 
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-mm 
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-gov-rc 
-```
-
-Apply watsonx Orchestrate prod license
-```bash
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=watsonx-orchestrate
-```
-
-Apply Watson Speech prod license(s)
-```bash
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=speech-to-text
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=text-to-speech
-```
-
-Apply Cognos Analytics prod license
-```bash
 cpd-cli manage apply-entitlement --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} --entitlement=cognos-analytics
 ```
 
 Confirm the status of the applied entitlements by checking the cpd-applied-entitlements configmap
 ```bash
-oc get cm cpd-applied-entitlements -o yaml -n ${PROJECT_CPD_INST_OPERANDS}
+oc get cm cpd-applied-entitlements -n ${PROJECT_CPD_INST_OPERANDS} -o yaml 
 ```
 
 For example
