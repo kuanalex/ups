@@ -608,7 +608,6 @@ Modify ibm-granite-3-2-8b-instruct-byom-v2 configmap to the correct productVersi
 oc edit cm ibm-granite-3-2-8b-instruct-byom-v2 -n ${PROJECT_CPD_INST_OPERANDS}
 ```
 
-
 ```bash
 apiVersion: v1
 data:
@@ -759,7 +758,7 @@ Any row with dirty = 1 is the cause
 Step 1 — Scale down wo-langfuse-web and wo-operator to stop new dirty rows being written
 ```bash
 oc scale deployment -n ups-wx-operands wo-langfuse-web --replicas=0
-oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator   --replicas=0
+oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator --replicas=0
 ```
 
 Confirm pods are gone
@@ -770,25 +769,25 @@ oc get pods -n ${PROJECT_CPD_INST_OPERATORS} -l app.kubernetes.io/component=wats
 
 Step 2 — Clear all dirty rows on shard 1-0-0
 ```bash
-oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-0-0 -c clickhouse -- \
+oc exec -n ups-wx-operands chi-application-default-shard-1-0-0 -c clickhouse -- \
  clickhouse-client --query \
  "ALTER TABLE default.schema_migrations UPDATE dirty = 0 WHERE dirty = 1"
 ```
 
 Step 3 — Clear all dirty rows on shard 1-1-0
 ```bash
-oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-1-0 -c clickhouse -- \
+oc exec -n ups-wx-operands chi-application-default-shard-1-1-0 -c clickhouse -- \
  clickhouse-client --query \
  "ALTER TABLE default.schema_migrations UPDATE dirty = 0 WHERE dirty = 1"
 ```
 
 Step 4 — Verify both pods are clean (should return 0)
 ```bash
-oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-0-0 -c clickhouse -- \
+oc exec -n ups-wx-operands chi-application-default-shard-1-0-0 -c clickhouse -- \
  clickhouse-client --query \
  "SELECT count() FROM default.schema_migrations WHERE dirty = 1"
 
-oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-1-0 -c clickhouse -- \
+oc exec -n ups-wx-operands chi-application-default-shard-1-1-0 -c clickhouse -- \
  clickhouse-client --query \
  "SELECT count() FROM default.schema_migrations WHERE dirty = 1"
 ```
@@ -797,20 +796,20 @@ oc exec -n ${PROJECT_CPD_INST_OPERANDS} chi-application-default-shard-1-1-0 -c c
 
 Step 5 — Scale wo-langfuse-web back up
 ```bash
-oc scale deployment -n ${PROJECT_CPD_INST_OPERANDS} wo-langfuse-web --replicas=1
+oc scale deployment -n ups-wx-operands wo-langfuse-web --replicas=1
 ```
 
 Step 6 — Watch the pod recover
 ```bash
-oc get pods -n ${PROJECT_CPD_INST_OPERANDS} -l app.kubernetes.io/component=langfuse-web -w
-oc get pods -n ${PROJECT_CPD_INST_OPERATORS} -l app.kubernetes.io/component=watson-orchestrate -w
+oc get pods -n ups-wx-operands -l app.kubernetes.io/component=langfuse-web -w
+oc get pods -n ups-wx-operators -l app.kubernetes.io/component=watson-orchestrate -w
 ```
 
 Expected outcome: pod reaches 2/2 Running with 0 restarts within ~60 seconds
 
 Step 7 — Once the langfuse pods back, Scale up wo-operator back up and ensure its running fine
 ```bash
-oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator  --replicas=1 
+oc scale deployment -n ups-wx-operators wo-operator  --replicas=1 
 ```
 
 **Notes**:
@@ -818,9 +817,9 @@ oc scale deployment -n ${PROJECT_CPD_INST_OPERATORS} wo-operator  --replicas=1
 - This issue typically appears after a failed Langfuse upgrade/rollout where the new pod started a migration but was terminated mid-way.
 - Both pods must be cleaned. ClickHouse uses ReplicatedMergeTree so the schema_migrations table exists independently on each shard replica.
 
-After the above steps are completed, the migration still needs to completed within a langfuse worker pod
+**Note**: After the above steps are completed, the migration still needs to completed within a langfuse worker pod
 
-RSH into the langfuse worker pod
+Identify and rsh into the langfuse worker pod
 ```bash
 oc rsh <wo-langfuse-worker-pod>
 ```
@@ -844,13 +843,15 @@ ALTER TABLE observations ON CLUSTER default ADD COLUMN environment LowCardinalit
 ALTER TABLE scores ON CLUSTER default ADD COLUMN environment LowCardinality(String) DEFAULT 'default' AFTER project_id SETTINGS alter_sync = 2;
 ```
 
+**Note**: Engage ClickHouse SME for subsequent required steps as not all workaround steps were documented here
+
 ---
 
 #### Potential Issue - Check Configuration Consistency In Orchestrate Postgres Clients
 
 Check the following pods for configuration consistency > api-server-runs, archer, conversation-controller, etc.
 
-RSH into any/all of these pods and check the configuration for the following fields
+Identify and rsh into any/all orchestrate pods and check the configuration for the following fields
 ```bash
 env | grep -E 'CHECKPOINT_MIN_POOL_SIZE|CHECKPOINT_MAX_LIFETIME|POSTGRES_POOL_RECYCLE'
 ```
@@ -861,6 +862,8 @@ CHECKPOINT_MIN_POOL_SIZE=2
 CHECKPOINT_MAX_LIFETIME=600
 POSTGRES_POOL_RECYCLE=240
 ```
+
+**Note**: In Prod-Central, these steps were taken for api-server-runs, archer, conversation-controller, confirm if any other pods need to be checked
 
 ---
 
@@ -895,13 +898,9 @@ Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
 {"level":"info","ts":"2026-08-20T04:25:14.355509372Z","logger":"postgres","msg":"record","logging_pod":"wo-watson-orchestrate-postgresedb-3","record":{"log_time":"2026-08-20 04:25:14.355 UTC","user_name":"postgres","database_name":"postgres","process_id":"37","connection_from":"[local]","session_id":"6a8681aa.25","session_line_num":"1","session_start_time":"2026-08-20 04:25:14 UTC","transaction_id":"0","error_severity":"FATAL","sql_state_code":"57P03","message":"the database system is starting up","backend_type":"client backend","query_id":"0"}}
 ```
 
----
+**Note**: Similar issue is reported in CSP ticket - TS022632926
 
-Similar issue is reported in CSP ticket - TS022632926
-
----
-
-Download and configure the kubectl-cnp plug-in
+To workaround the issue, first download and configure the kubectl-cnp plug-in
 ```bash
 curl -sSfL https://github.com/EnterpriseDB/kubectl-cnp/raw/main/install.sh | sudo sh -s -- -b /usr/local/bin
 ```
@@ -961,24 +960,7 @@ oc get wxdengine wo-milvus -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -A 10 
 Status/message:
 ```bash
 status:
-  conditions:
-  - lastTransitionTime: "2026-08-20T02:19:02Z"
-    message: ""
-    reason: ""
-    status: "False"
-    type: Successful
-  - lastTransitionTime: "2026-08-20T19:16:40Z"
-    message: Running reconciliation
-    reason: Running
-    status: "False"
-    type: Running
-  - ansibleResult:
-      changed: 1
-      completion: "2026-08-20T19:16:53.36887+00:00"
-      failures: 1
-      ok: 36
-      skipped: 17
-    lastTransitionTime: "2026-08-20T02:46:54Z"
+  ...
     message: |
       The conditional check '(licensing_cr_premium.resources is defined and licensing_cr_premium.resources | length > 0 and licensing_cr_premium.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_standard.resources is defined and licensing_cr_standard.resources | length > 0 and licensing_cr_standard.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_spark.resources is defined and licensing_cr_spark.resources | length > 0 and ('spark' in wxd_addon_cr.spec.components or 'spark' in wxd_addon_premium_cr.spec.components) and licensing_cr_spark.resources[0].spec.set.cloudpakName in license_map)' failed. The error was: error while evaluating conditional ((licensing_cr_premium.resources is defined and licensing_cr_premium.resources | length > 0 and licensing_cr_premium.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_standard.resources is defined and licensing_cr_standard.resources | length > 0 and licensing_cr_standard.resources[0].spec.set.cloudpakName in license_map) or (licensing_cr_spark.resources is defined and licensing_cr_spark.resources | length > 0 and ('spark' in wxd_addon_cr.spec.components or 'spark' in wxd_addon_premium_cr.spec.components) and licensing_cr_spark.resources[0].spec.set.cloudpakName in license_map)): 'dict object' has no attribute 'spec'
 
@@ -993,15 +975,12 @@ status:
     reason: Failed
     status: "True"
     type: Failure
-  engineStatus: Completed
-  middleEndStatus: RUNNING
-  middleEndStatusCode: "0"
-  upgradeStatus: 7/7 - Upgrade complete
-  versions:
-    reconciled: 2.3.1
+    ...
 ```
 
-The workaround used at the time was to create the missing ibmlicensingdefinition and restart the lakehouse operator pod
+The workaround used at the time was to create the missing 'IBMLicensingDefinition' and restart the lakehouse operator pod
+
+The following yaml accounts for the 'ups-wx-operands' namespace, and the cloudpakId and cloudpakInstanceId were extracted from the watsonxaiifm-configmap from Prod-East cluster health bundle
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: operator.ibm.com/v1
@@ -1104,7 +1083,7 @@ spec.containers[0].volumeMounts[x].mountPath: Invalid value: "/etc/pki/ca-trust/
 
 Several wxo deployments are impacted by this issue, which prevents the deployment pods from starting up properly
 
-Apply hot fix 1 to resolve the issues with the wxo deployments...
+Apply Hotfix1 to resolve the issues with the wxo deployments
 
 Follow the steps for 'Applying the watsonx Orchestrate 5.4.0 Patch-5 (5.4.2) Hotfix 1'
 
@@ -1694,7 +1673,7 @@ Verify CR status and label
 oc get wo -n "${PROJECT_CPD_INST_OPERANDS}" -o yaml | grep -i hotfix
 ```
 
-Create 5.4.2-Hotfix1-verify.sh
+**Optionally** - Create 5.4.2-Hotfix1-verify.sh
 ```bash
 vi 5.4.2-Hotfix1-verify.sh 
 ```
@@ -2154,7 +2133,7 @@ oc get deploy -n ${PROJECT_CPD_INST_OPERANDS} | grep wo-
 
 The wo-tenant-migration-job is supposed to run during the Orchestrate upgrade, but was skipped during the non-prod upgrade
 
-In this scenario, the wo-tenant-migration-job will need to be run manually
+In this scenario, the wo-tenant-migration-job may need to be run manually
 
 Create the job yaml file
 ```bash
@@ -2203,8 +2182,8 @@ spec:
   template:
     metadata:
       annotations:
-        cloudpakId: 6341c0866cd24bb298037e1476bd4e56
-        cloudpakInstanceId: 53071c66-1543-42e6-a0f5-6874e4802720
+        cloudpakId: 5e4c7dd451f14946bc298e18851f3746
+        cloudpakInstanceId: d694c85e-c053-48b0-8720-c64e290c11dd
         cloudpakName: IBM watsonx Orchestrate Cartridge for IBM Cloud Pak for Data
         productChargedContainers: All
         productCloudpakRatio: "1:1"
@@ -2603,7 +2582,7 @@ oc get wo wo -n ${PROJECT_CPD_INST_OPERANDS} -o yaml
 
 ---
 
-#### Post upgrade task 1 for Watsonx Orchestrate
+#### Post Upgrade Task 1 for Watsonx Orchestrate
 
 Login to Red Hat OpenShift cluster
 ```bash
