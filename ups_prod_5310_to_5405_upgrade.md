@@ -115,22 +115,22 @@ For detailed instructions on installing or updating these tools, refer to
 
 Take a backup of the routes
 ```bash
-oc get routes -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > routes_backup_$(date +%Y%m%d_%H%M%S).yaml
+oc get routes -n ups-wx-operands -o yaml > routes_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
 
 Validate 'expose:external-regional' label in the cpd route, add the label "expose:external-regional" to your cpd-route as required
 ```bash
-oc get route cpd -n ${PROJECT_CPD_INST_OPERANDS} -o yaml | grep -A 20 labels
+oc get route cpd -n ups-wx-operands -o yaml | grep -A 20 labels
 ```
 
 Take a backup of the temporary patches for watson assistant
 ```bash
-oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS} -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
+oc get TemporaryPatch -n ups-wx-operands -o yaml > temporarypatch_backup_$(date +%Y%m%d_%H%M%S).yaml
 ```
 
 List all of the temporary patches in the operands namespace
 ```bash
-oc get TemporaryPatch -n ${PROJECT_CPD_INST_OPERANDS}
+oc get TemporaryPatch -n ups-wx-operands
 ```
 
 For all patches that you want to retain, use the following command
@@ -188,7 +188,7 @@ oc get sc
 
 Check PVC status
 ```bash
-oc get pvc -n ${PROJECT_CPD_INST_OPERANDS}
+oc get pvc -n ups-wx-operands
 ```
 
 Check CR status
@@ -3461,7 +3461,7 @@ oc get CAService ca-addon-cr  -o yaml | grep -A 10 enableInstanaMetricCollection
 **Note**: If 'enableInstanaMetricCollection' is set to 'true' this can prevent the Cognos Analytics upgrade from completing, received confirmation from development that we can set 'enableInstanaMetricCollection' to 'false' prior to upgrade of Cognos Analytics
 ```bash
 oc patch caservices ca-addon-cr \
-  -n ${PROJECT_CPD_INST_OPERANDS} \
+  -n ups-wx-operands \
   --type=merge \
   -p '{"spec":{"enableInstanaMetricCollection": false}}'
 ```
