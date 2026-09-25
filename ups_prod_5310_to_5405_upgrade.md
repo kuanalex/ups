@@ -525,7 +525,12 @@ watch -n 3 'oc get po -A -owide | egrep -v "([0-9])/\1" | egrep -v "Completed" &
 
 During wx_ai upgrade, the WML operator can encounter an error related to PVC sizing and memory
 
-Monitor the WML operator logs and yaml for similar symptoms as the previous IFM operator issue
+Monitor the WML operator logs and yaml for similar symptoms as the IFM operator PVC sizing issue
+```bash
+[{"reason":"FieldValueForbidden","message":"Forbidden: field can not be less than status.capacity","field":"spec.resources.requests.storage"}]},"code":422}\n'
+```
+
+Get the logs for the WML operator
 ```bash
 oc logs ibm-cpd-wml-operator-6d5b5f795b-x258l -n ${PROJECT_CPD_INST_OPERATORS} | grep -i error
 ```
